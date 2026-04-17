@@ -5,13 +5,19 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from pydantic import Field
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from typing import List
 from typing import Optional
+from typing import Dict
+from typing import Any
 import gspread
 import random
 import datetime
+import csv
+import os
+import re
 
 mongo_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_client["trollskull_tavern"]
@@ -125,51 +131,23 @@ async def lifespan(app: FastAPI):
         seed_ledger = [
             {
                 "entry_type": "Income",
-                "description": "Ransom of the Twelve (Lord Lorahmar Djinni Rescue)",
+                "description": "Ransom of the Twelve",
                 "amount": 11000.0,
                 "frequency": "Once",
                 "entry_date": "Ches 30"
             },
             {
                 "entry_type": "Income",
-                "description": "Volo's Sponsorship (Brand Ambassador)",
+                "description": "Volo's Sponsorship",
                 "amount": 50.0,
                 "frequency": "Monthly",
                 "entry_date": "Ches 30"
             },
             {
                 "entry_type": "Guild",
-                "description": "Vintners' Guild Partnership (Mertyn Bottlewick) Upfront",
+                "description": "Vintners' Guild Partnership",
                 "amount": 300.0,
                 "frequency": "Once",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Renovation",
-                "description": "Tally Fellbranch Ironwood Restoration",
-                "amount": 1200.0,
-                "frequency": "Once",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Guild",
-                "description": "Dungsweepers' Guild (Grubach) Contract",
-                "amount": 20.0,
-                "frequency": "Weekly",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Guild",
-                "description": "Vintners' Guild Weekly Fee",
-                "amount": 5.0,
-                "frequency": "Weekly",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Tuition",
-                "description": "Murkledorn's Education (7 Urchins/Appleton Boys)",
-                "amount": 14.0,
-                "frequency": "Weekly",
                 "entry_date": "Ches 30"
             }
         ]
@@ -228,6 +206,219 @@ class SaveDayRequest(BaseModel):
     calendar_date: str
     sales: List[SaleItem]
 
+class NPCData(BaseModel):
+    first_name: str
+    last_name: str
+    affiliation: str
+    occupation: str
+    lifestyle: str
+    bar_disposition: int
+    party_disposition: int
+    
+class NPCDispositionUpdate(BaseModel):
+    index: int
+    delta: int
+
+def get_csv_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    csv_path = os.path.join(base_dir, "npcs.csv")
+    if not os.path.exists(csv_path):
+        csv_path = "npcs.csv"
+    return csv_path
+
+def load_clean_npcs(include_fieldnames=False):
+    npcs = []
+    csv_path = get_csv_path()
+    fieldnames = []
+    
+    if not os.path.exists(csv_path):
+        if include_fieldnames:
+            return npcs, ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition"]
+        return npcs
+        
+    with open(csv_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    
+    clean_lines = []
+    buffer = ""
+    for line in lines:
+        line = re.sub(r'\\s*', '', line).strip()
+        if not line:
+            continue
+        if buffer:
+            buffer += " " + line
+        else:
+            buffer = line
+            
+        if buffer.count(',') >= 6:
+            clean_lines.append(buffer)
+            buffer = ""
+            
+    if buffer:
+        clean_lines.append(buffer)
+        
+    if not clean_lines:
+        if include_fieldnames:
+            return [], []
+        return []
+
+    reader = csv.DictReader(clean_lines)
+    fieldnames = reader.fieldnames if reader.fieldnames else []
+    
+    for idx, row in enumerate(reader):
+        row["_csv_index"] = idx
+        npcs.append(row)
+            
+    if include_fieldnames:
+        return npcs, fieldnames
+    return npcs
+
+def save_npcs_to_csv(npcs, fieldnames):
+    csv_path = get_csv_path()
+    if not fieldnames:
+        fieldnames = ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition"]
+        
+    required_fields = ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition"]
+    for req in required_fields:
+        if req not in fieldnames:
+            fieldnames.append(req)
+
+    with open(csv_path, "w", encoding="utf-8", newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=[fn for fn in fieldnames if fn != "_csv_index"])
+        writer.writeheader()
+        for npc in npcs:
+            clean_npc = {k: v for k, v in npc.items() if k != "_csv_index"}
+            for fn in fieldnames:
+                if fn not in clean_npc and fn != "_csv_index":
+                    clean_npc[fn] = ""
+            writer.writerow(clean_npc)
+
+def simulate_npc_visitors():
+    npcs = load_clean_npcs()
+    if not npcs:
+        return [], {}
+        
+    willing_npcs = []
+    for n in npcs:
+        try:
+            b_val = str(n.get("Bar Disposition", "0")).strip()
+            p_val = str(n.get("Party Disposition", "0")).strip()
+            if not b_val: b_val = "0"
+            if not p_val: p_val = "0"
+            bar_disp = int(b_val)
+            party_disp = int(p_val)
+            if bar_disp + party_disp > -20:
+                willing_npcs.append(n)
+        except ValueError:
+            continue
+            
+    num_groups = random.randint(1, 5)
+    groups = []
+    
+    hourly_counts = {}
+    for h in range(12, 24):
+        hourly_counts[str(h)] = []
+    
+    random.shuffle(willing_npcs)
+    used_names = set()
+    
+    for _ in range(num_groups):
+        if not willing_npcs:
+            break
+            
+        leader = willing_npcs.pop(0)
+        leader_first = str(leader.get("First Name", "")).strip()
+        leader_last = str(leader.get("Last Name", "")).strip()
+        leader_name = f"{leader_first} {leader_last}".strip()
+        if not leader_name:
+            leader_name = "Unknown Patron"
+            
+        if leader_name in used_names:
+            continue
+            
+        group_members = [leader]
+        used_names.add(leader_name)
+        
+        group_size_target = random.randint(1, 5)
+        members_to_remove = []
+        
+        for n in willing_npcs:
+            if len(group_members) >= group_size_target:
+                break
+                
+            n_first = str(n.get("First Name", "")).strip()
+            n_last = str(n.get("Last Name", "")).strip()
+            n_name = f"{n_first} {n_last}".strip()
+            if not n_name or n_name in used_names:
+                continue
+                
+            shared_last = (n_last != "" and n_last == leader_last)
+            shared_affil = (n.get("Affiliation", "") != "" and n.get("Affiliation", "") == leader.get("Affiliation", ""))
+            
+            if shared_last or shared_affil:
+                group_members.append(n)
+                used_names.add(n_name)
+                members_to_remove.append(n)
+                
+        for m in members_to_remove:
+            willing_npcs.remove(m)
+            
+        arrival = random.randint(12, 21)
+        stay = random.randint(1, 4)
+        departure = min(23, arrival + stay)
+        group_spend = 0.0
+        member_data = []
+        
+        for m in group_members:
+            m_first = str(m.get("First Name", "")).strip()
+            m_last = str(m.get("Last Name", "")).strip()
+            m_name = f"{m_first} {m_last}".strip()
+            if not m_name:
+                m_name = "Unknown Patron"
+                
+            lifestyle = str(m.get("Lifestyle", "")).lower()
+            if "wealthy" in lifestyle or "aristocratic" in lifestyle or "noble" in lifestyle:
+                spend = random.uniform(5.0, 15.0)
+            elif "comfortable" in lifestyle:
+                spend = random.uniform(2.0, 5.0)
+            elif "modest" in lifestyle:
+                spend = random.uniform(0.5, 2.0)
+            else:
+                spend = random.uniform(0.1, 0.5)
+                
+            group_spend += spend
+            
+            try:
+                b_disp = int(m.get("Bar Disposition", 0))
+            except:
+                b_disp = 0
+                
+            member_data.append({
+                "index": m.get("_csv_index", -1),
+                "name": m_name,
+                "affiliation": m.get("Affiliation", ""),
+                "occupation": m.get("Occupation", ""),
+                "lifestyle": m.get("Lifestyle", ""),
+                "bar_disposition": b_disp
+            })
+            
+            for hour in range(arrival, departure + 1):
+                if str(hour) in hourly_counts:
+                    hourly_counts[str(hour)].append(m_name)
+                
+        groups.append({
+            "leader": leader_name,
+            "size": len(group_members),
+            "members_data": member_data,
+            "arrival": arrival,
+            "departure": departure,
+            "stay_duration": stay,
+            "group_spend": round(group_spend, 2),
+            "location": "Unassigned"
+        })
+        
+    return groups, hourly_counts
+
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
     try:
@@ -235,8 +426,7 @@ def serve_frontend():
             html_content = file.read()
         return HTMLResponse(content=html_content, status_code=200)
     except FileNotFoundError:
-        error_html = "<h1>Error: index.html not found.</h1>"
-        return HTMLResponse(content=error_html, status_code=404)
+        return HTMLResponse(content="<h1>Error: index.html not found.</h1>", status_code=404)
 
 @app.post("/api/roll")
 def calculate_tavern_outcome(request: RollRequest):
@@ -246,66 +436,117 @@ def calculate_tavern_outcome(request: RollRequest):
         total_staff_bonus += staff.get("bonus", 0)
 
     total_roll = request.base_roll + total_staff_bonus + request.renown_bonus + request.environmental_bonus
-    outcome = "Standard Day"
     
-    patrons = 0
-    vip_patrons = 0
+    table_capacity = 44
+    bar_capacity = 10
+    vip_capacity = 10
+    standing_capacity = random.randint(20, 40)
+    
+    patrons_main = 0
+    patrons_standing = 0
+    patrons_vip = 0
+    outcome = "Standard Day"
 
     if total_roll <= 20:
         outcome = "Disaster: A brawl broke out. Empty tavern."
-        patrons = random.randint(0, 10)
+        patrons_main = random.randint(0, 10)
     elif total_roll <= 40:
         outcome = "Poor Day: Slow business."
-        patrons = random.randint(10, 20)
+        patrons_main = random.randint(10, 20)
     elif total_roll <= 60:
         outcome = "Average Day: Modest crowd."
-        patrons = random.randint(20, 40)
+        patrons_main = random.randint(20, 40)
     elif total_roll <= 80:
         outcome = "Good Day: Busy tavern."
-        patrons = random.randint(40, 54)
+        patrons_main = random.randint(40, 54)
     else:
         outcome = "Windfall: The tavern is packed!"
-        patrons = 54
+        patrons_main = 54
+        patrons_standing = random.randint(5, standing_capacity)
 
     if total_roll > 60:
         vip_check = random.randint(1, 20)
         if vip_check >= 14:
             vip_fullness = random.randint(1, 100)
-            vip_patrons = max(1, int((vip_fullness / 100.0) * 10))
+            patrons_vip = max(1, int((vip_fullness / 100.0) * vip_capacity))
 
-    ale_qty = int(patrons * random.uniform(1.0, 2.5))
-    food_qty = int(patrons * random.uniform(0.2, 0.8))
-    premium_qty = int(vip_patrons * random.uniform(2.0, 4.0))
+    spots_available = {
+        "VIP": patrons_vip,
+        "Table": min(patrons_main, table_capacity),
+        "Bar": max(0, patrons_main - table_capacity),
+        "Standing": patrons_standing
+    }
+
+    npc_groups, npc_hourly = simulate_npc_visitors()
+    
+    total_npc_spend = 0.0
+    total_named_visitors = 0
+    
+    for g in npc_groups:
+        lifestyles = [str(m.get("lifestyle", "")).lower() for m in g["members_data"]]
+        
+        ideal = "Bar"
+        if any(l in lifestyles for l in ["aristocratic", "wealthy", "noble"]):
+            ideal = "VIP"
+        elif any(l in lifestyles for l in ["comfortable"]):
+            ideal = "Table"
+            
+        placed = False
+        for pref in [ideal, "Table", "Bar", "Standing", "VIP"]:
+            if spots_available[pref] >= g["size"]:
+                spots_available[pref] -= g["size"]
+                g["location"] = pref
+                placed = True
+                break
+                
+        if not placed:
+            g["location"] = "Standing"
+            
+        total_npc_spend += g["group_spend"]
+        total_named_visitors += g["size"]
+
+    ale_qty = int((patrons_main + patrons_standing) * random.uniform(1.0, 2.5))
+    food_qty = int(patrons_main * random.uniform(0.2, 0.8))
+    premium_qty = int(patrons_vip * random.uniform(2.0, 4.0))
 
     generated_sales = []
     if ale_qty > 0:
-        generated_sales.append({"item_name": "Standard Ale/Drinks", "quantity": ale_qty, "total_price": ale_qty * 0.5})
+        generated_sales.append({"item_name": "Standard Ale/Drinks", "quantity": ale_qty, "total_price": round(ale_qty * 0.5, 2)})
     if food_qty > 0:
-        generated_sales.append({"item_name": "Tavern Fare", "quantity": food_qty, "total_price": food_qty * 1.5})
+        generated_sales.append({"item_name": "Tavern Fare", "quantity": food_qty, "total_price": round(food_qty * 1.5, 2)})
     if premium_qty > 0:
-        generated_sales.append({"item_name": "Premium VIP Drinks", "quantity": premium_qty, "total_price": premium_qty * 5.0})
+        generated_sales.append({"item_name": "Premium VIP Drinks", "quantity": premium_qty, "total_price": round(premium_qty * 5.0, 2)})
+        
+    if total_npc_spend > 0:
+        generated_sales.append({
+            "item_name": "Named NPC Group Spend",
+            "quantity": total_named_visitors,
+            "total_price": round(total_npc_spend, 2)
+        })
 
     result = {
         "total_roll": total_roll,
         "staff_bonus_applied": total_staff_bonus,
         "outcome": outcome,
-        "main_patrons": patrons,
-        "vip_patrons": vip_patrons,
-        "auto_sales": generated_sales
+        "main_patrons": patrons_main,
+        "standing_patrons": patrons_standing,
+        "vip_patrons": patrons_vip,
+        "max_standing": standing_capacity,
+        "auto_sales": generated_sales,
+        "npc_groups": npc_groups,
+        "npc_hourly": npc_hourly
     }
     return result
 
 @app.post("/api/save_day")
 def save_day_data(request: SaveDayRequest):
     date_str = request.calendar_date
-    
     for sale in request.sales:
         sale.sale_date = date_str
         sale_dict = sale.dict()
         db.sales.insert_one(sale_dict)
         if gc is not None:
-            row = [sale.sale_date, sale.item_name, sale.quantity, sale.total_price]
-            sales_sheet.append_row(row)
+            sales_sheet.append_row([sale.sale_date, sale.item_name, sale.quantity, sale.total_price])
 
     daily_staff = db.staff.find({"frequency": "Daily"})
     for staff in daily_staff:
@@ -319,19 +560,13 @@ def save_day_data(request: SaveDayRequest):
             }
             db.ledger.insert_one(wage_entry)
             if gc is not None:
-                row = [date_str, "Expense", wage_entry["description"], wage_entry["amount"]]
-                ledger_sheet.append_row(row)
+                ledger_sheet.append_row([date_str, "Expense", wage_entry["description"], wage_entry["amount"]])
 
     return {"status": "Day Saved Successfully"}
 
 @app.get("/api/inventory")
 def get_inventory():
-    inventory_cursor = db.inventory.find()
-    inventory_list = []
-    for item in inventory_cursor:
-        item["_id"] = str(item["_id"])
-        inventory_list.append(item)
-    return inventory_list
+    return [{**i, "_id": str(i["_id"])} for i in db.inventory.find()]
 
 @app.post("/api/inventory")
 def add_inventory(item: InventoryItem):
@@ -342,18 +577,12 @@ def add_inventory(item: InventoryItem):
 
 @app.put("/api/inventory/{item_id}")
 def update_inventory(item_id: str, item: InventoryItem):
-    obj_id = ObjectId(item_id)
-    db.inventory.update_one({"_id": obj_id}, {"$set": item.dict()})
+    db.inventory.update_one({"_id": ObjectId(item_id)}, {"$set": item.dict()})
     return {"status": "Updated"}
 
 @app.get("/api/staff")
 def get_staff():
-    staff_cursor = db.staff.find()
-    staff_list = []
-    for s in staff_cursor:
-        s["_id"] = str(s["_id"])
-        staff_list.append(s)
-    return staff_list
+    return [{**s, "_id": str(s["_id"])} for s in db.staff.find()]
 
 @app.post("/api/staff")
 def add_staff(staff: StaffItem):
@@ -362,40 +591,85 @@ def add_staff(staff: StaffItem):
     staff_dict["_id"] = str(staff_dict["_id"])
     return staff_dict
 
+@app.put("/api/staff/{staff_id}")
+def update_staff(staff_id: str, staff: StaffItem):
+    db.staff.update_one({"_id": ObjectId(staff_id)}, {"$set": staff.dict()})
+    return {"status": "Updated"}
+
 @app.get("/api/ledger")
 def get_ledger():
-    ledger_cursor = db.ledger.find()
-    ledger_list = []
-    for item in ledger_cursor:
-        item["_id"] = str(item["_id"])
-        ledger_list.append(item)
-    return ledger_list
+    return [{**l, "_id": str(l["_id"])} for l in db.ledger.find()]
 
 @app.post("/api/ledger")
 def record_ledger_entry(entry: LedgerEntry):
     entry_dict = entry.dict()
     db.ledger.insert_one(entry_dict)
     if gc is not None:
-        row = [entry.entry_date, entry.entry_type, entry.description, entry.amount]
-        ledger_sheet.append_row(row)
+        ledger_sheet.append_row([entry.entry_date, entry.entry_type, entry.description, entry.amount])
     entry_dict["_id"] = str(entry_dict["_id"])
     return entry_dict
 
+@app.put("/api/ledger/{entry_id}")
+def update_ledger(entry_id: str, entry: LedgerEntry):
+    db.ledger.update_one({"_id": ObjectId(entry_id)}, {"$set": entry.dict()})
+    return {"status": "Updated"}
+
 @app.get("/api/reports")
 def get_reports():
-    sales_cursor = db.sales.find()
-    sales = []
-    for s in sales_cursor:
-        s["_id"] = str(s["_id"])
-        sales.append(s)
-        
-    ledger_cursor = db.ledger.find()
-    ledger = []
-    for l in ledger_cursor:
-        l["_id"] = str(l["_id"])
-        ledger.append(l)
-        
+    sales = [{**s, "_id": str(s["_id"])} for s in db.sales.find()]
+    ledger = [{**l, "_id": str(l["_id"])} for l in db.ledger.find()]
     return {"sales": sales, "ledger": ledger}
+
+@app.get("/api/npcs")
+def get_npcs():
+    npcs = load_clean_npcs()
+    return npcs
+
+@app.post("/api/npcs")
+def create_npc(npc: NPCData):
+    npcs, fieldnames = load_clean_npcs(include_fieldnames=True)
+    new_row = {
+        "First Name": npc.first_name,
+        "Last Name": npc.last_name,
+        "Affiliation": npc.affiliation,
+        "Occupation": npc.occupation,
+        "Lifestyle": npc.lifestyle,
+        "Bar Disposition": str(npc.bar_disposition),
+        "Party Disposition": str(npc.party_disposition)
+    }
+    npcs.append(new_row)
+    save_npcs_to_csv(npcs, fieldnames)
+    return {"status": "Added NPC"}
+
+@app.put("/api/npcs/{index}")
+def update_npc(index: int, npc: NPCData):
+    npcs, fieldnames = load_clean_npcs(include_fieldnames=True)
+    for row in npcs:
+        if row.get("_csv_index") == index:
+            row["First Name"] = npc.first_name
+            row["Last Name"] = npc.last_name
+            row["Affiliation"] = npc.affiliation
+            row["Occupation"] = npc.occupation
+            row["Lifestyle"] = npc.lifestyle
+            row["Bar Disposition"] = str(npc.bar_disposition)
+            row["Party Disposition"] = str(npc.party_disposition)
+            break
+    save_npcs_to_csv(npcs, fieldnames)
+    return {"status": "Updated NPC"}
+
+@app.put("/api/npcs/disposition/adjust")
+def adjust_npc_disposition(req: NPCDispositionUpdate):
+    npcs, fieldnames = load_clean_npcs(include_fieldnames=True)
+    for row in npcs:
+        if row.get("_csv_index") == req.index:
+            try:
+                curr = int(row.get("Bar Disposition", 0))
+            except:
+                curr = 0
+            row["Bar Disposition"] = str(curr + req.delta)
+            break
+    save_npcs_to_csv(npcs, fieldnames)
+    return {"status": "Disposition adjusted"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

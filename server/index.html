@@ -74,6 +74,17 @@
         button:hover {
             background-color: #005f9e;
         }
+        .disp-btn {
+            padding: 2px 6px;
+            margin-left: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            border: none;
+        }
+        .disp-btn.plus { background-color: #28a745; color: white; }
+        .disp-btn.minus { background-color: #dc3545; color: white; }
+        
         .tab-content {
             display: none;
             background-color: #252526;
@@ -111,6 +122,10 @@
         }
         th {
             background-color: #333;
+            cursor: pointer;
+        }
+        th:hover {
+            background-color: #444;
         }
         .editable-input {
             width: 90%;
@@ -171,27 +186,13 @@
         <button onclick="switchTab('inventory')">INVENTORY</button>
         <button onclick="switchTab('staff')">STAFF</button>
         <button onclick="switchTab('ledger')">LEDGER</button>
+        <button onclick="switchTab('npcs')">NPC DIRECTORY</button>
         <button onclick="switchTab('reports')">REPORTING</button>
     </nav>
 
     <div id="dashboard" class="tab-content active-tab">
         <h2>Tavern Status & Operations</h2>
         
-        <div class="stats-box">
-            <div class="stat-card">
-                <h3>Total Capacity</h3>
-                <p>64 Seats</p>
-            </div>
-            <div class="stat-card">
-                <h3>Main Floor</h3>
-                <p>54 Seats (10 Bar, 44 Table)</p>
-            </div>
-            <div class="stat-card">
-                <h3>VIP Booth</h3>
-                <p>10 Seats</p>
-            </div>
-        </div>
-
         <div class="form-group">
             <label>Base Roll (d100):</label>
             <input type="number" id="base_roll" value="50">
@@ -209,9 +210,42 @@
         <div id="outcome-result" style="margin-top: 20px; padding: 15px; background-color: #333; display: none;">
             <h3 id="out-title">Result</h3>
             <p id="out-desc"></p>
-            <p><strong>Main Floor Patrons:</strong> <span id="out-main"></span>/54</p>
-            <p><strong>VIP Patrons:</strong> <span id="out-vip"></span>/10</p>
+            
+            <div class="stats-box" style="margin-top:15px;">
+                <div class="stat-card">
+                    <h3>Tables (44)</h3>
+                    <p id="out-tables">0 / 44</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Bar (10)</h3>
+                    <p id="out-bar">0 / 10</p>
+                </div>
+                <div class="stat-card">
+                    <h3>VIP (10)</h3>
+                    <p id="out-vip">0 / 10</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Standing Room</h3>
+                    <p id="out-standing">0 / 0</p>
+                </div>
+            </div>
+            
             <div class="auto-sales-list" id="out-sales"></div>
+
+            <h3 style="margin-top: 20px;">Named NPC Visitors (Grouped)</h3>
+            <div id="out-npc-groups"></div>
+            
+            <h3 style="margin-top: 20px;">Hourly Breakdown</h3>
+            <table style="width: 100%; margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Hour</th>
+                        <th>Present NPCs</th>
+                    </tr>
+                </thead>
+                <tbody id="out-npc-hourly">
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -254,36 +288,32 @@
 
     <div id="staff" class="tab-content">
         <h2>Tavern Staff & Guilds</h2>
-        <div class="form-group">
-            <label>Name:</label>
-            <input type="text" id="staff_name">
+        
+        <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
+            <h3>Hire New Staff</h3>
+            <div class="form-group"><label>Name:</label><input type="text" id="staff_name"></div>
+            <div class="form-group"><label>Wage Amount (gp):</label><input type="number" id="staff_wage" value="0.0" step="0.1"></div>
+            <div class="form-group">
+                <label>Payment Frequency:</label>
+                <select id="staff_freq">
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly (Tenday)</option>
+                    <option value="Monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Tavern Bonus (+ to roll):</label><input type="number" id="staff_bonus" value="0"></div>
+            <button onclick="addStaff()">Hire Staff</button>
         </div>
-        <div class="form-group">
-            <label>Wage Amount (gp):</label>
-            <input type="number" id="staff_wage" value="0.0" step="0.1">
-        </div>
-        <div class="form-group">
-            <label>Payment Frequency:</label>
-            <select id="staff_freq">
-                <option value="Daily">Daily</option>
-                <option value="Weekly">Weekly (Tenday)</option>
-                <option value="Monthly">Monthly</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Tavern Bonus (+ to roll):</label>
-            <input type="number" id="staff_bonus" value="0">
-        </div>
-        <button onclick="addStaff()">Hire Staff</button>
 
-        <h3 style="margin-top: 30px;">Current Staff Roster</h3>
+        <button onclick="loadStaff()">Refresh Staff Roster</button>
         <table>
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Wage</th>
+                    <th>Wage (gp)</th>
                     <th>Frequency</th>
                     <th>Bonus</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody id="staff-table-body">
@@ -293,37 +323,28 @@
 
     <div id="ledger" class="tab-content">
         <h2>Ledger & Expenses</h2>
-        <p><em>Daily staff wages are automatically processed when you click "Save Day".</em></p>
-        
         <div style="display:flex; gap: 20px;">
-            <div style="flex:1;">
+            <div style="flex:1; background-color:#333; padding: 15px; border-radius:4px; max-height:400px;">
                 <h3>Add New Entry</h3>
                 <div class="form-group">
                     <label>Type:</label>
                     <select id="ledger_type">
                         <option value="Income">Income / Windfall</option>
                         <option value="Expense">General Expense</option>
-                        <option value="Guild">Guild Contracts (Vintner/Dungsweepers)</option>
-                        <option value="Renovation">Renovation / Upkeep (Carpenters/Masons)</option>
+                        <option value="Guild">Guild Contracts</option>
+                        <option value="Renovation">Renovation</option>
                         <option value="PettyCash">Petty Cash</option>
-                        <option value="Tuition">Apprentice Tuition (Murkledorn's)</option>
-                        <option value="Maintenance">Hounds Upkeep (Loki & Odin)</option>
+                        <option value="Tuition">Tuition</option>
                     </select>
                 </div>
+                <div class="form-group"><label>Description:</label><input type="text" id="ledger_desc"></div>
+                <div class="form-group"><label>Amount (gp):</label><input type="number" id="ledger_amount" value="0.0" step="0.1"></div>
                 <div class="form-group">
-                    <label>Description:</label>
-                    <input type="text" id="ledger_desc">
-                </div>
-                <div class="form-group">
-                    <label>Amount (gp):</label>
-                    <input type="number" id="ledger_amount" value="0.0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>Frequency (For records):</label>
+                    <label>Frequency:</label>
                     <select id="ledger_freq">
                         <option value="Once">One-Time</option>
                         <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly (Tenday)</option>
+                        <option value="Weekly">Weekly</option>
                         <option value="Monthly">Monthly</option>
                     </select>
                 </div>
@@ -331,8 +352,7 @@
             </div>
             
             <div style="flex:2;">
-                <h3>Ledger History</h3>
-                <button onclick="loadLedger()">Refresh Ledger</button>
+                <button onclick="loadLedger()">Refresh Ledger History</button>
                 <table style="font-size: 14px;">
                     <thead>
                         <tr>
@@ -341,6 +361,7 @@
                             <th>Description</th>
                             <th>Amount (gp)</th>
                             <th>Freq</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="ledger-table-body">
@@ -348,6 +369,43 @@
                 </table>
             </div>
         </div>
+    </div>
+    
+    <div id="npcs" class="tab-content">
+        <h2>NPC Directory</h2>
+        
+        <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
+            <h3>Add New NPC</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1;"><label>First Name:</label><input type="text" id="new_npc_first"></div>
+                <div class="form-group" style="flex:1;"><label>Last Name:</label><input type="text" id="new_npc_last"></div>
+                <div class="form-group" style="flex:1;"><label>Faction/Affiliation:</label><input type="text" id="new_npc_affil"></div>
+                <div class="form-group" style="flex:1;"><label>Occupation:</label><input type="text" id="new_npc_occ"></div>
+                <div class="form-group" style="flex:1;"><label>Lifestyle:</label><input type="text" id="new_npc_life"></div>
+                <div class="form-group" style="flex:0.5;"><label>Bar Disp:</label><input type="number" id="new_npc_bar" value="0"></div>
+                <div class="form-group" style="flex:0.5;"><label>Party Disp:</label><input type="number" id="new_npc_party" value="0"></div>
+            </div>
+            <button onclick="addNPC()">Add NPC</button>
+        </div>
+
+        <button onclick="loadNPCs()">Refresh NPC List</button>
+        <p style="font-size:12px; color:#aaa;">Click table headers to sort. Edit fields and click Save.</p>
+        <table id="npcTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('npcTable', 0)">First Name</th>
+                    <th onclick="sortTable('npcTable', 1)">Last Name</th>
+                    <th onclick="sortTable('npcTable', 2)">Faction/Affil</th>
+                    <th onclick="sortTable('npcTable', 3)">Occupation</th>
+                    <th onclick="sortTable('npcTable', 4)">Lifestyle</th>
+                    <th onclick="sortTable('npcTable', 5, true)">Bar Disp</th>
+                    <th onclick="sortTable('npcTable', 6, true)">Party Disp</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="npc-table-body">
+            </tbody>
+        </table>
     </div>
 
     <div id="reports" class="tab-content">
@@ -370,6 +428,7 @@
             if(tabId === 'inventory') loadInventory();
             if(tabId === 'staff') loadStaff();
             if(tabId === 'ledger') loadLedger();
+            if(tabId === 'npcs') loadNPCs();
         }
 
         async function rollOutcome() {
@@ -390,44 +449,86 @@
             document.getElementById('outcome-result').style.display = 'block';
             document.getElementById('out-title').innerText = `Roll: ${data.total_roll} (Includes +${data.staff_bonus_applied} Staff Bonus)`;
             document.getElementById('out-desc').innerText = data.outcome;
-            document.getElementById('out-main').innerText = data.main_patrons;
-            document.getElementById('out-vip').innerText = data.vip_patrons;
+            
+            const tableSeats = Math.min(data.main_patrons, 44);
+            const barSeats = Math.max(0, data.main_patrons - 44);
+            
+            document.getElementById('out-tables').innerText = `${tableSeats} / 44`;
+            document.getElementById('out-bar').innerText = `${barSeats} / 10`;
+            document.getElementById('out-vip').innerText = `${data.vip_patrons} / 10`;
+            document.getElementById('out-standing').innerText = `${data.standing_patrons} / ${data.max_standing}`;
             
             pendingAutoSales = data.auto_sales;
             
             let salesHtml = "<strong>Auto-Generated Sales based on patrons:</strong><ul>";
-            if (pendingAutoSales.length === 0) {
-                salesHtml += "<li>None.</li>";
-            } else {
-                pendingAutoSales.forEach(s => {
-                    salesHtml += `<li>${s.quantity}x ${s.item_name} for ${s.total_price.toFixed(2)} gp</li>`;
-                });
-            }
+            if (pendingAutoSales.length === 0) salesHtml += "<li>None.</li>";
+            else pendingAutoSales.forEach(s => salesHtml += `<li>${s.quantity}x ${s.item_name} for ${s.total_price.toFixed(2)} gp</li>`);
             salesHtml += "</ul>";
             document.getElementById('out-sales').innerHTML = salesHtml;
+
+            let npcGroupsHtml = "";
+            if (data.npc_groups && data.npc_groups.length > 0) {
+                npcGroupsHtml += "<table><thead><tr><th>Group Loc</th><th>Group Size</th><th>Members</th><th>Time</th><th>Total Spend</th></tr></thead><tbody>";
+                data.npc_groups.forEach(g => {
+                    let membersListHtml = g.members_data.map(m => {
+                        const isNoble = m.lifestyle.toLowerCase().match(/aristocratic|wealthy|noble/);
+                        const nobleSym = isNoble ? "👑" : "";
+                        const details = (m.affiliation || m.occupation) ? `[${m.affiliation || 'No Faction'} - ${m.occupation || 'Civilian'}]` : "";
+                        return `<div style="margin-bottom:4px;">
+                            ${nobleSym} <strong>${m.name}</strong> ${details} 
+                            (Disp: <span id="disp_${m.index}">${m.bar_disposition}</span>
+                            <button class="disp-btn plus" onclick="adjustDisp(${m.index}, 1)">+</button>
+                            <button class="disp-btn minus" onclick="adjustDisp(${m.index}, -1)">-</button>)
+                        </div>`;
+                    }).join("");
+                    
+                    npcGroupsHtml += `<tr>
+                        <td><strong>${g.location}</strong></td>
+                        <td>${g.size}</td>
+                        <td>${membersListHtml}</td>
+                        <td>${g.arrival}:00 - ${g.departure}:00 (${g.stay_duration} hrs)</td>
+                        <td class="income-text">+${g.group_spend.toFixed(2)} gp</td>
+                    </tr>`;
+                });
+                npcGroupsHtml += "</tbody></table>";
+            } else {
+                npcGroupsHtml = "<p><em>No notable NPCs visited today.</em></p>";
+            }
+            document.getElementById('out-npc-groups').innerHTML = npcGroupsHtml;
+
+            let npcHourlyHtml = "";
+            if (data.npc_hourly) {
+                for (let hour = 12; hour <= 23; hour++) {
+                    const present = data.npc_hourly[hour] || [];
+                    const presentText = present.length > 0 ? present.join(", ") : "<em>None</em>";
+                    npcHourlyHtml += `<tr><td>${hour}:00</td><td>${presentText}</td></tr>`;
+                }
+            }
+            document.getElementById('out-npc-hourly').innerHTML = npcHourlyHtml;
+        }
+
+        async function adjustDisp(index, delta) {
+            if(index < 0) return;
+            const res = await fetch(`${API_URL}/npcs/disposition/adjust`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ index: index, delta: delta })
+            });
+            if(res.ok) {
+                let el = document.getElementById(`disp_${index}`);
+                if(el) {
+                    el.innerText = parseInt(el.innerText) + delta;
+                }
+            }
         }
 
         async function saveDay() {
             const dateStr = document.getElementById('global_date').value;
-            
-            if(!dateStr) {
-                alert("Please enter a Current Date in the top right corner.");
-                return;
-            }
-
-            const payload = {
-                calendar_date: dateStr,
-                sales: pendingAutoSales
-            };
-
-            const response = await fetch(`${API_URL}/save_day`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
+            if(!dateStr) { alert("Please enter a Current Date."); return; }
+            const payload = { calendar_date: dateStr, sales: pendingAutoSales };
+            const response = await fetch(`${API_URL}/save_day`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if(response.ok) {
-                alert(`Day ${dateStr} saved successfully! Sales and Daily Wages recorded.`);
+                alert(`Day ${dateStr} saved successfully!`);
                 pendingAutoSales = [];
                 document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger.</em>";
             }
@@ -441,13 +542,7 @@
                 total_price: parseFloat(document.getElementById('sale_price').value),
                 sale_date: dateStr
             };
-
-            const response = await fetch(`${API_URL}/sales`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
+            const response = await fetch(`${API_URL}/sales`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if(response.ok) {
                 alert("Manual sale recorded.");
                 document.getElementById('sale_item').value = "";
@@ -460,7 +555,6 @@
             const data = await response.json();
             const tbody = document.getElementById('inventory-table-body');
             tbody.innerHTML = "";
-            
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -483,16 +577,8 @@
                 units_per: parseInt(document.getElementById(`inv_per_${id}`).value),
                 unit_price: parseFloat(document.getElementById(`inv_price_${id}`).value)
             };
-
-            const response = await fetch(`${API_URL}/inventory/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if(response.ok) {
-                alert("Item updated.");
-            }
+            await fetch(`${API_URL}/inventory/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            alert("Item updated.");
         }
 
         async function loadStaff() {
@@ -500,14 +586,14 @@
             const data = await response.json();
             const tbody = document.getElementById('staff-table-body');
             tbody.innerHTML = "";
-            
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${s.name}</td>
-                    <td>${s.wage} gp</td>
-                    <td>${s.frequency}</td>
-                    <td>+${s.bonus}</td>
+                    <td><input class="editable-input" type="text" id="stf_name_${s._id}" value="${s.name}"></td>
+                    <td><input class="editable-input" type="number" id="stf_wage_${s._id}" value="${s.wage}" step="0.1"></td>
+                    <td><input class="editable-input" type="text" id="stf_freq_${s._id}" value="${s.frequency}"></td>
+                    <td><input class="editable-input" type="number" id="stf_bon_${s._id}" value="${s.bonus}"></td>
+                    <td><button onclick="updateStaff('${s._id}')">Save</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -520,18 +606,19 @@
                 frequency: document.getElementById('staff_freq').value,
                 bonus: parseInt(document.getElementById('staff_bonus').value)
             };
-
-            const response = await fetch(`${API_URL}/staff`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if(response.ok) {
-                alert("Staff added.");
-                document.getElementById('staff_name').value = "";
-                loadStaff();
-            }
+            const res = await fetch(`${API_URL}/staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if(res.ok) { document.getElementById('staff_name').value = ""; loadStaff(); }
+        }
+        
+        async function updateStaff(id) {
+            const payload = {
+                name: document.getElementById(`stf_name_${id}`).value,
+                wage: parseFloat(document.getElementById(`stf_wage_${id}`).value),
+                frequency: document.getElementById(`stf_freq_${id}`).value,
+                bonus: parseInt(document.getElementById(`stf_bon_${id}`).value)
+            };
+            await fetch(`${API_URL}/staff/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            alert("Staff updated.");
         }
 
         async function loadLedger() {
@@ -539,19 +626,15 @@
             const data = await response.json();
             const tbody = document.getElementById('ledger-table-body');
             tbody.innerHTML = "";
-            
             data.reverse().forEach(l => {
                 const tr = document.createElement('tr');
-                const isIncome = l.entry_type === "Income";
-                const amountClass = isIncome ? "income-text" : "expense-text";
-                const sign = isIncome ? "+" : "-";
-                
                 tr.innerHTML = `
-                    <td>${l.entry_date}</td>
-                    <td>${l.entry_type}</td>
-                    <td>${l.description}</td>
-                    <td class="${amountClass}">${sign}${l.amount.toFixed(2)}</td>
-                    <td>${l.frequency}</td>
+                    <td><input class="editable-input" type="text" id="led_date_${l._id}" value="${l.entry_date}"></td>
+                    <td><input class="editable-input" type="text" id="led_type_${l._id}" value="${l.entry_type}"></td>
+                    <td><input class="editable-input" type="text" id="led_desc_${l._id}" value="${l.description}"></td>
+                    <td><input class="editable-input" type="number" id="led_amt_${l._id}" value="${l.amount}" step="0.1"></td>
+                    <td><input class="editable-input" type="text" id="led_freq_${l._id}" value="${l.frequency}"></td>
+                    <td><button onclick="updateLedger('${l._id}')">Save</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -566,48 +649,129 @@
                 frequency: document.getElementById('ledger_freq').value,
                 entry_date: dateStr
             };
+            const res = await fetch(`${API_URL}/ledger`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if(res.ok) { document.getElementById('ledger_desc').value = ""; loadLedger(); }
+        }
+        
+        async function updateLedger(id) {
+            const payload = {
+                entry_date: document.getElementById(`led_date_${id}`).value,
+                entry_type: document.getElementById(`led_type_${id}`).value,
+                description: document.getElementById(`led_desc_${id}`).value,
+                amount: parseFloat(document.getElementById(`led_amt_${id}`).value),
+                frequency: document.getElementById(`led_freq_${id}`).value
+            };
+            await fetch(`${API_URL}/ledger/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            alert("Entry updated.");
+            loadLedger();
+        }
 
-            const response = await fetch(`${API_URL}/ledger`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        async function loadNPCs() {
+            const response = await fetch(`${API_URL}/npcs`);
+            const data = await response.json();
+            const tbody = document.getElementById('npc-table-body');
+            tbody.innerHTML = "";
+            data.forEach(npc => {
+                const idx = npc._csv_index;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input class="editable-input" type="text" id="npc_f_${idx}" value="${npc['First Name'] || ''}"></td>
+                    <td><input class="editable-input" type="text" id="npc_l_${idx}" value="${npc['Last Name'] || ''}"></td>
+                    <td><input class="editable-input" type="text" id="npc_a_${idx}" value="${npc['Affiliation'] || ''}"></td>
+                    <td><input class="editable-input" type="text" id="npc_o_${idx}" value="${npc['Occupation'] || ''}"></td>
+                    <td><input class="editable-input" type="text" id="npc_li_${idx}" value="${npc['Lifestyle'] || ''}"></td>
+                    <td><input class="editable-input" type="number" id="npc_b_${idx}" value="${npc['Bar Disposition'] || '0'}"></td>
+                    <td><input class="editable-input" type="number" id="npc_p_${idx}" value="${npc['Party Disposition'] || '0'}"></td>
+                    <td><button onclick="updateNPC(${idx})">Save</button></td>
+                `;
+                tbody.appendChild(tr);
             });
+        }
+        
+        async function addNPC() {
+            const payload = {
+                first_name: document.getElementById('new_npc_first').value,
+                last_name: document.getElementById('new_npc_last').value,
+                affiliation: document.getElementById('new_npc_affil').value,
+                occupation: document.getElementById('new_npc_occ').value,
+                lifestyle: document.getElementById('new_npc_life').value,
+                bar_disposition: parseInt(document.getElementById('new_npc_bar').value || 0),
+                party_disposition: parseInt(document.getElementById('new_npc_party').value || 0)
+            };
+            const res = await fetch(`${API_URL}/npcs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if(res.ok) { 
+                document.getElementById('new_npc_first').value = "";
+                document.getElementById('new_npc_last').value = "";
+                loadNPCs(); 
+            }
+        }
 
-            if(response.ok) {
-                alert("Entry recorded.");
-                document.getElementById('ledger_desc').value = "";
-                loadLedger();
+        async function updateNPC(idx) {
+            const payload = {
+                first_name: document.getElementById(`npc_f_${idx}`).value,
+                last_name: document.getElementById(`npc_l_${idx}`).value,
+                affiliation: document.getElementById(`npc_a_${idx}`).value,
+                occupation: document.getElementById(`npc_o_${idx}`).value,
+                lifestyle: document.getElementById(`npc_li_${idx}`).value,
+                bar_disposition: parseInt(document.getElementById(`npc_b_${idx}`).value || 0),
+                party_disposition: parseInt(document.getElementById(`npc_p_${idx}`).value || 0)
+            };
+            await fetch(`${API_URL}/npcs/${idx}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            alert("NPC updated.");
+        }
+
+        function sortTable(tableId, colIndex, isNumeric=false) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById(tableId);
+            switching = true;
+            dir = "asc"; 
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[colIndex].getElementsByTagName("INPUT")[0];
+                    y = rows[i + 1].getElementsByTagName("TD")[colIndex].getElementsByTagName("INPUT")[0];
+                    let valX = isNumeric ? parseFloat(x.value) || 0 : x.value.toLowerCase();
+                    let valY = isNumeric ? parseFloat(y.value) || 0 : y.value.toLowerCase();
+                    
+                    if (dir == "asc") {
+                        if (valX > valY) { shouldSwitch = true; break; }
+                    } else if (dir == "desc") {
+                        if (valX < valY) { shouldSwitch = true; break; }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
             }
         }
 
         async function loadReports() {
             const response = await fetch(`${API_URL}/reports`);
             const data = await response.json();
+            let totalSales = 0, totalExpenses = 0, totalLedgerIncome = 0;
             
-            let totalSales = 0;
             data.sales.forEach(s => totalSales += s.total_price);
-            
-            let totalExpenses = 0;
-            let totalLedgerIncome = 0;
-            
             data.ledger.forEach(l => {
-                if(l.entry_type === "Income") {
-                    totalLedgerIncome += l.amount;
-                } else {
-                    totalExpenses += l.amount;
-                }
+                if(l.entry_type === "Income") totalLedgerIncome += l.amount;
+                else totalExpenses += l.amount;
             });
-            
             const net = (totalSales + totalLedgerIncome) - totalExpenses;
             
-            const out = document.getElementById('report-output');
-            out.innerHTML = `
+            document.getElementById('report-output').innerHTML = `
                 <h3>System Overview</h3>
                 <p><strong>Total Recorded Bar Sales:</strong> ${totalSales.toFixed(2)} gp</p>
                 <p><strong>Total Ledger Income (Grants/Sponsors):</strong> ${totalLedgerIncome.toFixed(2)} gp</p>
-                <p><strong>Total Recorded Expenses (Guilds/Wages/Repairs):</strong> ${totalExpenses.toFixed(2)} gp</p>
+                <p><strong>Total Recorded Expenses:</strong> ${totalExpenses.toFixed(2)} gp</p>
                 <p><strong>Net Vault Profit/Loss:</strong> <span style="color: ${net >= 0 ? '#28a745' : '#dc3545'}; font-size: 18px; font-weight: bold;">${net.toFixed(2)} gp</span></p>
-                <p><em>(Data spans all recorded dates in the database)</em></p>
             `;
         }
 
