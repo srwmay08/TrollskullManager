@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trollskull Tavern Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #d7ba7d;
+        }
+        nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #005f9e;
+        }
+        .tab-content {
+            display: none;
+            background-color: #252526;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .active-tab {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            background-color: #3c3c3c;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+        }
+        #outcome-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-left: 5px solid #d7ba7d;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Trollskull Manor Management</h1>
+
+    <nav>
+        <button onclick="switchTab('dashboard')">DASHBOARD</button>
+        <button onclick="switchTab('sales')">SALES</button>
+        <button onclick="switchTab('inventory')">INVENTORY</button>
+        <button onclick="switchTab('ledger')">LEDGER</button>
+    </nav>
+
+    <div id="dashboard" class="tab-content active-tab">
+        <h2>Business Roll Calculator</h2>
+        <div class="form-group">
+            <label>Base Roll (d100):</label>
+            <input type="number" id="base_roll" value="50">
+        </div>
+        <div class="form-group">
+            <label>Staff Bonus (+):</label>
+            <input type="number" id="staff_bonus" value="0">
+        </div>
+        <div class="form-group">
+            <label>Renown Bonus (+):</label>
+            <input type="number" id="renown_bonus" value="0">
+        </div>
+        <div class="form-group">
+            <label>Environmental Effects (+):</label>
+            <input type="number" id="env_bonus" value="0">
+        </div>
+        <button onclick="rollOutcome()">Generate Outcome</button>
+        
+        <div id="outcome-result">Awaiting roll...</div>
+    </div>
+
+    <div id="sales" class="tab-content">
+        <h2>Record a Sale</h2>
+        <div class="form-group">
+            <label>Item Name:</label>
+            <input type="text" id="sale_item">
+        </div>
+        <div class="form-group">
+            <label>Quantity:</label>
+            <input type="number" id="sale_qty" value="1">
+        </div>
+        <div class="form-group">
+            <label>Total Price (gp):</label>
+            <input type="number" id="sale_price" value="0.0" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Date (Tenday/Month):</label>
+            <input type="text" id="sale_date" placeholder="e.g., Ches 12">
+        </div>
+        <button onclick="submitSale()">Record Sale</button>
+    </div>
+
+    <div id="inventory" class="tab-content">
+        <h2>Inventory Management</h2>
+        <button onclick="loadInventory()">Refresh Inventory List</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Stock on Hand</th>
+                    <th>Stock on Order</th>
+                    <th>Units Per</th>
+                    <th>Unit Price (gp)</th>
+                </tr>
+            </thead>
+            <tbody id="inventory-table-body">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="ledger" class="tab-content">
+        <h2>Ledger & Expenses</h2>
+        <div class="form-group">
+            <label>Type:</label>
+            <select id="ledger_type">
+                <option value="Wage">Wages</option>
+                <option value="Guild">Guild Contracts (Innkeepers)</option>
+                <option value="PettyCash">Petty Cash Dispersal</option>
+                <option value="Tuition">Apprentice Tuition</option>
+                <option value="Maintenance">Hounds Upkeep (Loki & Odin)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Description:</label>
+            <input type="text" id="ledger_desc">
+        </div>
+        <div class="form-group">
+            <label>Amount (gp):</label>
+            <input type="number" id="ledger_amount" value="0.0" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Date:</label>
+            <input type="text" id="ledger_date" placeholder="e.g., Ches 12">
+        </div>
+        <button onclick="submitLedger()">Record Expense</button>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000/api";
+
+        function switchTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.classList.remove('active-tab');
+            });
+            document.getElementById(tabId).classList.add('active-tab');
+        }
+
+        async function rollOutcome() {
+            const payload = {
+                base_roll: parseInt(document.getElementById('base_roll').value),
+                staff_bonus: parseInt(document.getElementById('staff_bonus').value),
+                renown_bonus: parseInt(document.getElementById('renown_bonus').value),
+                environmental_bonus: parseInt(document.getElementById('env_bonus').value)
+            };
+
+            const response = await fetch(`${API_URL}/roll`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
+            const resultDiv = document.getElementById('outcome-result');
+            resultDiv.innerHTML = `<strong>Total Roll:</strong> ${data.total_roll} <br> <strong>Outcome:</strong> ${data.outcome} <br> <strong>Profit Multiplier:</strong> ${data.profit_multiplier}x`;
+        }
+
+        async function submitSale() {
+            const payload = {
+                item_name: document.getElementById('sale_item').value,
+                quantity: parseInt(document.getElementById('sale_qty').value),
+                total_price: parseFloat(document.getElementById('sale_price').value),
+                sale_date: document.getElementById('sale_date').value
+            };
+
+            const response = await fetch(`${API_URL}/sales`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if(response.ok) {
+                alert("Sale recorded successfully.");
+                document.getElementById('sale_item').value = "";
+                document.getElementById('sale_qty').value = "1";
+                document.getElementById('sale_price').value = "0.0";
+            }
+        }
+
+        async function loadInventory() {
+            const response = await fetch(`${API_URL}/inventory`);
+            const data = await response.json();
+            const tbody = document.getElementById('inventory-table-body');
+            tbody.innerHTML = "";
+            
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.item_name}</td>
+                    <td>${item.stock_on_hand}</td>
+                    <td>${item.stock_on_order}</td>
+                    <td>${item.units_per}</td>
+                    <td>${item.unit_price}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function submitLedger() {
+            const payload = {
+                entry_type: document.getElementById('ledger_type').value,
+                description: document.getElementById('ledger_desc').value,
+                amount: parseFloat(document.getElementById('ledger_amount').value),
+                entry_date: document.getElementById('ledger_date').value
+            };
+
+            const response = await fetch(`${API_URL}/ledger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if(response.ok) {
+                alert("Expense recorded successfully.");
+                document.getElementById('ledger_desc').value = "";
+                document.getElementById('ledger_amount').value = "0.0";
+            }
+        }
+
+        window.onload = loadInventory;
+    </script>
+</body>
+</html>
