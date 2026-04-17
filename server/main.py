@@ -4,17 +4,13 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from pydantic import Field
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from typing import List
-from typing import Optional
-from typing import Dict
-from typing import Any
 import gspread
 import random
-import datetime
 import csv
 import os
 import re
@@ -31,55 +27,79 @@ except Exception as e:
     print("Google Sheets connection failed. Operating with MongoDB only.")
     gc = None
 
+def get_inventory_csv_path():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    csv_path = os.path.join(base_dir, "inventory.csv")
+    if not os.path.exists(csv_path):
+        csv_path = "inventory.csv"
+    return csv_path
+
+def load_inventory_csv(include_fieldnames=False):
+    inv = []
+    csv_path = get_inventory_csv_path()
+    fieldnames = []
+    if not os.path.exists(csv_path):
+        if include_fieldnames:
+            return inv, ["Item Name", "Stock on Hand", "Stock on Order", "Units Per", "Unit Price"]
+        return inv
+        
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames if reader.fieldnames else []
+        for idx, row in enumerate(reader):
+            row["_csv_index"] = idx
+            inv.append(row)
+            
+    if include_fieldnames:
+        return inv, fieldnames
+    return inv
+
+def save_inventory_csv(inv, fieldnames):
+    csv_path = get_inventory_csv_path()
+    if not fieldnames:
+        fieldnames = ["Item Name", "Stock on Hand", "Stock on Order", "Units Per", "Unit Price"]
+        
+    with open(csv_path, "w", encoding="utf-8", newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=[fn for fn in fieldnames if fn != "_csv_index"])
+        writer.writeheader()
+        for item in inv:
+            clean_item = {k: v for k, v in item.items() if k != "_csv_index"}
+            for fn in fieldnames:
+                if fn not in clean_item:
+                    clean_item[fn] = ""
+            writer.writerow(clean_item)
+
+def init_inventory_csv():
+    csv_path = get_inventory_csv_path()
+    if not os.path.exists(csv_path):
+        seed_data = [
+            {"Item Name": "Moradin-Anaz (\"Moradin's Hammerfall\")", "Stock on Hand": 60, "Stock on Order": 0, "Units Per": 1, "Unit Price": 2.0},
+            {"Item Name": "Ironforge Reserve", "Stock on Hand": 60, "Stock on Order": 0, "Units Per": 1, "Unit Price": 1.0},
+            {"Item Name": "Stone-Hearth Malt", "Stock on Hand": 60, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.5},
+            {"Item Name": "First Frost", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 5, "Unit Price": 5.0},
+            {"Item Name": "Azun's Lament", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 5, "Unit Price": 3.0},
+            {"Item Name": "Silver Spring", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 5, "Unit Price": 2.0},
+            {"Item Name": "Manycherries Bold", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 5, "Unit Price": 1.0},
+            {"Item Name": "Harbor White", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 5, "Unit Price": 0.8},
+            {"Item Name": "Pulass", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 5, "Unit Price": 1.0},
+            {"Item Name": "Best Old Mintarn Whisky", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 1.0},
+            {"Item Name": "Wyvern Whiskey", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.8},
+            {"Item Name": "Amberjack Whiskey", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.6},
+            {"Item Name": "Waterdhavian Zzar", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.5},
+            {"Item Name": "Lieutenant Talbot's Moonshine", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.4},
+            {"Item Name": "Shadowdale Brandy", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 1.0},
+            {"Item Name": "Neverwinter Black Icewine", "Stock on Hand": 50, "Stock on Order": 0, "Units Per": 1, "Unit Price": 2.0},
+            {"Item Name": "The \"Lif\" Special", "Stock on Hand": 100, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.8},
+            {"Item Name": "Aftermath Abbey Ale", "Stock on Hand": 100, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.1},
+            {"Item Name": "Hell's Teeth Cider", "Stock on Hand": 100, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.05},
+            {"Item Name": "Black Wyvern Porter", "Stock on Hand": 100, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.04},
+            {"Item Name": "Goat's Head Ale", "Stock on Hand": 100, "Stock on Order": 0, "Units Per": 1, "Unit Price": 0.03}
+        ]
+        save_inventory_csv(seed_data, ["Item Name", "Stock on Hand", "Stock on Order", "Units Per", "Unit Price"])
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    if db.inventory.count_documents({}) == 0:
-        seed_items = [
-            {
-                "item_name": "Moradin's Hammerfall (Heavy Pour)",
-                "stock_on_hand": 60,
-                "stock_on_order": 0,
-                "units_per": 1,
-                "unit_price": 2.0
-            },
-            {
-                "item_name": "First Frost Art Wine (Bottle)",
-                "stock_on_hand": 10,
-                "stock_on_order": 5,
-                "units_per": 5,
-                "unit_price": 25.0
-            },
-            {
-                "item_name": "Azun's Lament (Bottle)",
-                "stock_on_hand": 12,
-                "stock_on_order": 0,
-                "units_per": 5,
-                "unit_price": 15.0
-            },
-            {
-                "item_name": "Black Wyvern Porter (Tankard)",
-                "stock_on_hand": 200,
-                "stock_on_order": 100,
-                "units_per": 1,
-                "unit_price": 0.04
-            },
-            {
-                "item_name": "The 'Lif' Special (Glass)",
-                "stock_on_hand": 50,
-                "stock_on_order": 0,
-                "units_per": 1,
-                "unit_price": 0.8
-            },
-            {
-                "item_name": "Gumpfish Stew (Bowl)",
-                "stock_on_hand": 30,
-                "stock_on_order": 0,
-                "units_per": 1,
-                "unit_price": 0.3
-            }
-        ]
-        db.inventory.insert_many(seed_items)
-    
+    init_inventory_csv()
     if db.staff.count_documents({}) == 0:
         seed_staff = [
             {
@@ -214,10 +234,13 @@ class NPCData(BaseModel):
     lifestyle: str
     bar_disposition: int
     party_disposition: int
+    main_quest: int
+    side_quest: int
     
 class NPCDispositionUpdate(BaseModel):
     index: int
     delta: int
+    disp_type: str 
 
 def get_csv_path():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -233,7 +256,7 @@ def load_clean_npcs(include_fieldnames=False):
     
     if not os.path.exists(csv_path):
         if include_fieldnames:
-            return npcs, ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition"]
+            return npcs, ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition", "MAIN QUEST NPC", "SIDE QUEST NPC"]
         return npcs
         
     with open(csv_path, "r", encoding="utf-8") as f:
@@ -276,9 +299,9 @@ def load_clean_npcs(include_fieldnames=False):
 def save_npcs_to_csv(npcs, fieldnames):
     csv_path = get_csv_path()
     if not fieldnames:
-        fieldnames = ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition"]
+        fieldnames = ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition", "MAIN QUEST NPC", "SIDE QUEST NPC"]
         
-    required_fields = ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition"]
+    required_fields = ["First Name", "Last Name", "Affiliation", "Occupation", "Lifestyle", "Bar Disposition", "Party Disposition", "MAIN QUEST NPC", "SIDE QUEST NPC"]
     for req in required_fields:
         if req not in fieldnames:
             fieldnames.append(req)
@@ -293,130 +316,156 @@ def save_npcs_to_csv(npcs, fieldnames):
                     clean_npc[fn] = ""
             writer.writerow(clean_npc)
 
-def simulate_npc_visitors():
+def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing, temp_stock, item_prices):
     npcs = load_clean_npcs()
-    if not npcs:
-        return [], {}
-        
     willing_npcs = []
+    
     for n in npcs:
         try:
             b_val = str(n.get("Bar Disposition", "0")).strip()
             p_val = str(n.get("Party Disposition", "0")).strip()
             if not b_val: b_val = "0"
             if not p_val: p_val = "0"
-            bar_disp = int(b_val)
-            party_disp = int(p_val)
-            if bar_disp + party_disp > -20:
+            if int(b_val) + int(p_val) > -20:
                 willing_npcs.append(n)
         except ValueError:
             continue
             
-    num_groups = random.randint(1, 5)
+    random.shuffle(willing_npcs)
+    
+    quest_npcs = []
+    drinkers = []
+    for n in willing_npcs:
+        try: mq = int(n.get("MAIN QUEST NPC", 0))
+        except: mq = 0
+        try: sq = int(n.get("SIDE QUEST NPC", 0))
+        except: sq = 0
+        
+        if mq == 1 or sq == 1:
+            quest_npcs.append(n)
+        else:
+            drinkers.append(n)
+            
+    num_guaranteed_quests = min(len(quest_npcs), random.randint(1, 3))
+    guaranteed = quest_npcs[:num_guaranteed_quests]
+    rest = quest_npcs[num_guaranteed_quests:] + drinkers
+    random.shuffle(rest)
+    willing_npcs = guaranteed + rest
+    
+    generics = [
+        "Merchant", "City Guard", "Traveler", "Artisan", "Laborer", 
+        "Sailor", "Nobleman", "Beggar", "Mercenary", "Guildsman"
+    ]
+    
+    hourly_counts = {str(h): {"VIP": [], "Table": [], "Bar": [], "Standing": []} for h in range(12, 24)}
     groups = []
     
-    hourly_counts = {}
-    for h in range(12, 24):
-        hourly_counts[str(h)] = []
-    
-    random.shuffle(willing_npcs)
-    used_names = set()
-    
-    for _ in range(num_groups):
-        if not willing_npcs:
-            break
+    def build_groups_for_location(target_size, loc_name):
+        cat_groups = []
+        current_count = 0
+        while current_count < target_size:
+            g_size = random.randint(1, min(5, target_size - current_count))
+            if g_size <= 0: break
             
-        leader = willing_npcs.pop(0)
-        leader_first = str(leader.get("First Name", "")).strip()
-        leader_last = str(leader.get("Last Name", "")).strip()
-        leader_name = f"{leader_first} {leader_last}".strip()
-        if not leader_name:
-            leader_name = "Unknown Patron"
+            members = []
             
-        if leader_name in used_names:
-            continue
+            for _ in range(g_size):
+                if willing_npcs:
+                    n = willing_npcs.pop(0)
+                    first = str(n.get("First Name", "")).strip()
+                    last = str(n.get("Last Name", "")).strip()
+                    name = f"{first} {last}".strip()
+                    if not name: name = "Unknown Patron"
+                    affil = n.get("Affiliation", "")
+                    occ = n.get("Occupation", "")
+                    life = n.get("Lifestyle", "")
+                    try: b_disp = int(n.get("Bar Disposition", 0))
+                    except: b_disp = 0
+                    try: p_disp = int(n.get("Party Disposition", 0))
+                    except: p_disp = 0
+                    try: mq = int(n.get("MAIN QUEST NPC", 0))
+                    except: mq = 0
+                    try: sq = int(n.get("SIDE QUEST NPC", 0))
+                    except: sq = 0
+                    idx = n.get("_csv_index", -1)
+                else:
+                    title = random.choice(generics)
+                    name = f"Anonymous {title}"
+                    affil = "None"
+                    occ = title
+                    life = "Modest"
+                    if title in ["Nobleman", "Merchant", "Guildsman"]: life = "Wealthy"
+                    elif title in ["Beggar"]: life = "Squalid"
+                    b_disp, p_disp, mq, sq, idx = 0, 0, 0, 0, -1
+                    
+                members.append({
+                    "index": idx,
+                    "name": name,
+                    "affiliation": affil,
+                    "occupation": occ,
+                    "lifestyle": life,
+                    "bar_disposition": b_disp,
+                    "party_disposition": p_disp,
+                    "main_quest": mq,
+                    "side_quest": sq
+                })
             
-        group_members = [leader]
-        used_names.add(leader_name)
-        
-        group_size_target = random.randint(1, 5)
-        members_to_remove = []
-        
-        for n in willing_npcs:
-            if len(group_members) >= group_size_target:
-                break
-                
-            n_first = str(n.get("First Name", "")).strip()
-            n_last = str(n.get("Last Name", "")).strip()
-            n_name = f"{n_first} {n_last}".strip()
-            if not n_name or n_name in used_names:
-                continue
-                
-            shared_last = (n_last != "" and n_last == leader_last)
-            shared_affil = (n.get("Affiliation", "") != "" and n.get("Affiliation", "") == leader.get("Affiliation", ""))
+            current_count += g_size
+            arrival = random.randint(12, 21)
+            stay = random.randint(1, 4)
+            departure = min(23, arrival + stay)
             
-            if shared_last or shared_affil:
-                group_members.append(n)
-                used_names.add(n_name)
-                members_to_remove.append(n)
-                
-        for m in members_to_remove:
-            willing_npcs.remove(m)
+            receipt_dict = {}
+            g_spend = 0.0
             
-        arrival = random.randint(12, 21)
-        stay = random.randint(1, 4)
-        departure = min(23, arrival + stay)
-        group_spend = 0.0
-        member_data = []
-        
-        for m in group_members:
-            m_first = str(m.get("First Name", "")).strip()
-            m_last = str(m.get("Last Name", "")).strip()
-            m_name = f"{m_first} {m_last}".strip()
-            if not m_name:
-                m_name = "Unknown Patron"
-                
-            lifestyle = str(m.get("Lifestyle", "")).lower()
-            if "wealthy" in lifestyle or "aristocratic" in lifestyle or "noble" in lifestyle:
-                spend = random.uniform(5.0, 15.0)
-            elif "comfortable" in lifestyle:
-                spend = random.uniform(2.0, 5.0)
-            elif "modest" in lifestyle:
-                spend = random.uniform(0.5, 2.0)
-            else:
-                spend = random.uniform(0.1, 0.5)
-                
-            group_spend += spend
-            
-            try:
-                b_disp = int(m.get("Bar Disposition", 0))
-            except:
-                b_disp = 0
-                
-            member_data.append({
-                "index": m.get("_csv_index", -1),
-                "name": m_name,
-                "affiliation": m.get("Affiliation", ""),
-                "occupation": m.get("Occupation", ""),
-                "lifestyle": m.get("Lifestyle", ""),
-                "bar_disposition": b_disp
+            for m in members:
+                m_life = str(m.get("lifestyle", "")).lower()
+                mult = 1.0
+                if "wealthy" in m_life or "aristocratic" in m_life or "noble" in m_life: mult = 2.5
+                elif "modest" in m_life: mult = 0.8
+                elif "squalid" in m_life: mult = 0.5
+                    
+                num_items = random.randint(1, 3)
+                for _ in range(num_items):
+                    avail = [k for k, v in temp_stock.items() if v > 0]
+                    if not avail: break
+                    choice = random.choice(avail)
+                    temp_stock[choice] -= 1
+                    cost = item_prices[choice] * mult
+                    g_spend += cost
+                    
+                    if choice in receipt_dict:
+                        receipt_dict[choice]["qty"] += 1
+                        receipt_dict[choice]["cost"] += cost
+                    else:
+                        receipt_dict[choice] = {"qty": 1, "cost": cost}
+                        
+            formatted_receipt = [{"item_name": k, "quantity": v["qty"], "total_price": round(v["cost"], 2)} for k, v in receipt_dict.items()]
+                    
+            cat_groups.append({
+                "leader": members[0]["name"],
+                "size": g_size,
+                "members_data": members,
+                "arrival": arrival,
+                "departure": departure,
+                "stay_duration": stay,
+                "group_spend": round(g_spend, 2),
+                "location": loc_name,
+                "receipt": formatted_receipt
             })
             
-            for hour in range(arrival, departure + 1):
-                if str(hour) in hourly_counts:
-                    hourly_counts[str(hour)].append(m_name)
-                
-        groups.append({
-            "leader": leader_name,
-            "size": len(group_members),
-            "members_data": member_data,
-            "arrival": arrival,
-            "departure": departure,
-            "stay_duration": stay,
-            "group_spend": round(group_spend, 2),
-            "location": "Unassigned"
-        })
-        
+            for m in members:
+                for hour in range(arrival, departure + 1):
+                    if str(hour) in hourly_counts:
+                        hourly_counts[str(hour)][loc_name].append(m)
+                        
+        return cat_groups
+
+    groups.extend(build_groups_for_location(target_vip, "VIP"))
+    groups.extend(build_groups_for_location(target_table, "Table"))
+    groups.extend(build_groups_for_location(target_bar, "Bar"))
+    groups.extend(build_groups_for_location(target_standing, "Standing"))
+    
     return groups, hourly_counts
 
 @app.get("/", response_class=HTMLResponse)
@@ -427,6 +476,13 @@ def serve_frontend():
         return HTMLResponse(content=html_content, status_code=200)
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Error: index.html not found.</h1>", status_code=404)
+
+@app.get("/{filename}.png")
+def serve_image(filename: str):
+    file_path = f"{filename}.png"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return HTTPException(status_code=404, detail="Image not found")
 
 @app.post("/api/roll")
 def calculate_tavern_outcome(request: RollRequest):
@@ -470,69 +526,46 @@ def calculate_tavern_outcome(request: RollRequest):
             vip_fullness = random.randint(1, 100)
             patrons_vip = max(1, int((vip_fullness / 100.0) * vip_capacity))
 
-    spots_available = {
-        "VIP": patrons_vip,
-        "Table": min(patrons_main, table_capacity),
-        "Bar": max(0, patrons_main - table_capacity),
-        "Standing": patrons_standing
-    }
+    target_table = min(patrons_main, table_capacity)
+    target_bar = max(0, patrons_main - table_capacity)
+    target_vip = patrons_vip
+    target_standing = patrons_standing
 
-    npc_groups, npc_hourly = simulate_npc_visitors()
+    inv = load_inventory_csv()
+    temp_stock = {i["Item Name"]: int(i.get("Stock on Hand", 0)) for i in inv}
+    item_prices = {i["Item Name"]: float(i.get("Unit Price", 0.0)) for i in inv}
+
+    npc_groups, npc_hourly = simulate_npc_visitors(target_vip, target_table, target_bar, target_standing, temp_stock, item_prices)
     
-    total_npc_spend = 0.0
-    total_named_visitors = 0
+    all_auto_sales = []
+    sales_agg = {}
     
-    for g in npc_groups:
-        lifestyles = [str(m.get("lifestyle", "")).lower() for m in g["members_data"]]
-        
-        ideal = "Bar"
-        if any(l in lifestyles for l in ["aristocratic", "wealthy", "noble"]):
-            ideal = "VIP"
-        elif any(l in lifestyles for l in ["comfortable"]):
-            ideal = "Table"
-            
-        placed = False
-        for pref in [ideal, "Table", "Bar", "Standing", "VIP"]:
-            if spots_available[pref] >= g["size"]:
-                spots_available[pref] -= g["size"]
-                g["location"] = pref
-                placed = True
-                break
+    def add_to_agg(receipt_list):
+        for r in receipt_list:
+            name = r["item_name"]
+            if name in sales_agg:
+                sales_agg[name]["quantity"] += r["quantity"]
+                sales_agg[name]["total_price"] += r["total_price"]
+            else:
+                sales_agg[name] = {"item_name": name, "quantity": r["quantity"], "total_price": r["total_price"]}
                 
-        if not placed:
-            g["location"] = "Standing"
-            
-        total_npc_spend += g["group_spend"]
-        total_named_visitors += g["size"]
+    for g in npc_groups:
+        add_to_agg(g["receipt"])
 
-    ale_qty = int((patrons_main + patrons_standing) * random.uniform(1.0, 2.5))
-    food_qty = int(patrons_main * random.uniform(0.2, 0.8))
-    premium_qty = int(patrons_vip * random.uniform(2.0, 4.0))
-
-    generated_sales = []
-    if ale_qty > 0:
-        generated_sales.append({"item_name": "Standard Ale/Drinks", "quantity": ale_qty, "total_price": round(ale_qty * 0.5, 2)})
-    if food_qty > 0:
-        generated_sales.append({"item_name": "Tavern Fare", "quantity": food_qty, "total_price": round(food_qty * 1.5, 2)})
-    if premium_qty > 0:
-        generated_sales.append({"item_name": "Premium VIP Drinks", "quantity": premium_qty, "total_price": round(premium_qty * 5.0, 2)})
-        
-    if total_npc_spend > 0:
-        generated_sales.append({
-            "item_name": "Named NPC Group Spend",
-            "quantity": total_named_visitors,
-            "total_price": round(total_npc_spend, 2)
-        })
+    for k, v in sales_agg.items():
+        all_auto_sales.append({"item_name": v["item_name"], "quantity": v["quantity"], "total_price": round(v["total_price"], 2)})
 
     result = {
         "total_roll": total_roll,
         "staff_bonus_applied": total_staff_bonus,
         "outcome": outcome,
         "main_patrons": patrons_main,
-        "standing_patrons": patrons_standing,
-        "vip_patrons": patrons_vip,
+        "table_patrons": target_table,
+        "bar_patrons": target_bar,
+        "standing_patrons": target_standing,
+        "vip_patrons": target_vip,
         "max_standing": standing_capacity,
-        "auto_sales": generated_sales,
+        "auto_sales": all_auto_sales,
         "npc_groups": npc_groups,
         "npc_hourly": npc_hourly
     }
@@ -541,12 +574,24 @@ def calculate_tavern_outcome(request: RollRequest):
 @app.post("/api/save_day")
 def save_day_data(request: SaveDayRequest):
     date_str = request.calendar_date
+    inv_list, fieldnames = load_inventory_csv(include_fieldnames=True)
+
     for sale in request.sales:
         sale.sale_date = date_str
         sale_dict = sale.dict()
         db.sales.insert_one(sale_dict)
+        
+        for row in inv_list:
+            if row["Item Name"] == sale.item_name:
+                try: curr = int(row.get("Stock on Hand", 0))
+                except: curr = 0
+                row["Stock on Hand"] = str(max(0, curr - sale.quantity))
+                break
+                
         if gc is not None:
             sales_sheet.append_row([sale.sale_date, sale.item_name, sale.quantity, sale.total_price])
+
+    save_inventory_csv(inv_list, fieldnames)
 
     daily_staff = db.staff.find({"frequency": "Daily"})
     for staff in daily_staff:
@@ -566,19 +611,36 @@ def save_day_data(request: SaveDayRequest):
 
 @app.get("/api/inventory")
 def get_inventory():
-    return [{**i, "_id": str(i["_id"])} for i in db.inventory.find()]
+    inv = load_inventory_csv()
+    return inv
 
 @app.post("/api/inventory")
 def add_inventory(item: InventoryItem):
-    item_dict = item.dict()
-    db.inventory.insert_one(item_dict)
-    item_dict["_id"] = str(item_dict["_id"])
-    return item_dict
+    inv, fieldnames = load_inventory_csv(include_fieldnames=True)
+    new_row = {
+        "Item Name": item.item_name,
+        "Stock on Hand": str(item.stock_on_hand),
+        "Stock on Order": str(item.stock_on_order),
+        "Units Per": str(item.units_per),
+        "Unit Price": str(item.unit_price)
+    }
+    inv.append(new_row)
+    save_inventory_csv(inv, fieldnames)
+    return {"status": "Added Inventory"}
 
-@app.put("/api/inventory/{item_id}")
-def update_inventory(item_id: str, item: InventoryItem):
-    db.inventory.update_one({"_id": ObjectId(item_id)}, {"$set": item.dict()})
-    return {"status": "Updated"}
+@app.put("/api/inventory/{index}")
+def update_inventory(index: int, item: InventoryItem):
+    inv, fieldnames = load_inventory_csv(include_fieldnames=True)
+    for row in inv:
+        if row.get("_csv_index") == index:
+            row["Item Name"] = item.item_name
+            row["Stock on Hand"] = str(item.stock_on_hand)
+            row["Stock on Order"] = str(item.stock_on_order)
+            row["Units Per"] = str(item.units_per)
+            row["Unit Price"] = str(item.unit_price)
+            break
+    save_inventory_csv(inv, fieldnames)
+    return {"status": "Updated Inventory"}
 
 @app.get("/api/staff")
 def get_staff():
@@ -635,7 +697,9 @@ def create_npc(npc: NPCData):
         "Occupation": npc.occupation,
         "Lifestyle": npc.lifestyle,
         "Bar Disposition": str(npc.bar_disposition),
-        "Party Disposition": str(npc.party_disposition)
+        "Party Disposition": str(npc.party_disposition),
+        "MAIN QUEST NPC": str(npc.main_quest),
+        "SIDE QUEST NPC": str(npc.side_quest)
     }
     npcs.append(new_row)
     save_npcs_to_csv(npcs, fieldnames)
@@ -653,6 +717,8 @@ def update_npc(index: int, npc: NPCData):
             row["Lifestyle"] = npc.lifestyle
             row["Bar Disposition"] = str(npc.bar_disposition)
             row["Party Disposition"] = str(npc.party_disposition)
+            row["MAIN QUEST NPC"] = str(npc.main_quest)
+            row["SIDE QUEST NPC"] = str(npc.side_quest)
             break
     save_npcs_to_csv(npcs, fieldnames)
     return {"status": "Updated NPC"}
@@ -662,11 +728,10 @@ def adjust_npc_disposition(req: NPCDispositionUpdate):
     npcs, fieldnames = load_clean_npcs(include_fieldnames=True)
     for row in npcs:
         if row.get("_csv_index") == req.index:
-            try:
-                curr = int(row.get("Bar Disposition", 0))
-            except:
-                curr = 0
-            row["Bar Disposition"] = str(curr + req.delta)
+            target_col = "Bar Disposition" if req.disp_type == 'bar' else "Party Disposition"
+            try: curr = int(row.get(target_col, 0))
+            except: curr = 0
+            row[target_col] = str(curr + req.delta)
             break
     save_npcs_to_csv(npcs, fieldnames)
     return {"status": "Disposition adjusted"}
