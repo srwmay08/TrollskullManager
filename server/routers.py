@@ -25,34 +25,29 @@ def sync_inventory_to_csv():
     
     with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["", "ORDER BY", "", "", "ITEMS / UNIT DETAILS", "", "COST PER ITEM", "SELL PRICE IN COPPER", "MARGIN IN COPPER", "STOCK UNIT QUANTITY", "REORDER LEVEL", "STATUS", "REORDER QUANTITY"])
-        writer.writerow(["CATEGORY / ITEM", "UNIT", "QUANTITY", "UNIT COST IN COPPER", "QUANTITY per UNIT", "SERVE SIZE", "", "", "", "", "", "", ""])
+        writer.writerow(["", "", "ORDER BY", "", "", "ITEMS / UNIT DETAILS", "", "COST PER ITEM", "SELL PRICE IN COPPER", "MARGIN IN COPPER", "STOCK UNIT QUANTITY", "REORDER LEVEL", "STATUS", "REORDER QUANTITY"])
+        writer.writerow(["CATEGORY", "ITEM", "UNIT", "QUANTITY", "UNIT COST IN COPPER", "QUANTITY per UNIT", "SERVE SIZE", "", "", "", "", "", "", ""])
+        writer.writerow([""] * 14)
         
-        groups = {}
+        # Sort items cleanly back into groups so the list stays organized in the CSV
+        items.sort(key=lambda x: x.get("category", ""))
         for item in items:
-            cat = item.get("category", "Uncategorized")
-            if cat not in groups:
-                groups[cat] = []
-            groups[cat].append(item)
-            
-        for cat, cat_items in groups.items():
-            writer.writerow([cat] + [""] * 12)
-            for item in cat_items:
-                writer.writerow([
-                    item.get("item_name", ""),
-                    item.get("order_unit", ""),
-                    item.get("order_quantity", 1),
-                    item.get("unit_cost_copper", 0.0),
-                    item.get("qty_per_unit", 1),
-                    item.get("serve_size", ""),
-                    item.get("cost_per_item_copper", 0.0),
-                    item.get("sell_price_copper", 0.0),
-                    item.get("margin_copper", 0.0),
-                    item.get("stock_unit_quantity", 0),
-                    item.get("reorder_level", 0),
-                    item.get("status", "OK"),
-                    item.get("reorder_quantity", 0)
-                ])
+            writer.writerow([
+                item.get("category", ""),
+                item.get("item_name", ""),
+                item.get("order_unit", ""),
+                item.get("order_quantity", 1),
+                item.get("unit_cost_copper", 0.0),
+                item.get("qty_per_unit", 1),
+                item.get("serve_size", ""),
+                item.get("cost_per_item_copper", 0.0),
+                item.get("sell_price_copper", 0.0),
+                item.get("margin_copper", 0.0),
+                item.get("stock_unit_quantity", 0),
+                item.get("reorder_level", 0),
+                item.get("status", "OK"),
+                item.get("reorder_quantity", 0)
+            ])
 
 def sync_npcs_to_csv():
     items = list(db.npcs.find({}, {"_id": 0}))

@@ -169,10 +169,11 @@ function renderInventory() {
     }
 
     let html = `
-        <table style="font-size: 13px; min-width: 1400px; border-collapse: collapse;">
+        <table style="font-size: 13px; min-width: 1600px; border-collapse: collapse;">
             <thead>
                 <tr>
-                    <th rowspan="2" style="cursor:pointer; width: 180px;" onclick="sortInventory('item_name')">CATEGORY / ITEM ⇅</th>
+                    <th rowspan="2" style="cursor:pointer; width: 140px;" onclick="sortInventory('category')">CATEGORY ⇅</th>
+                    <th rowspan="2" style="cursor:pointer; width: 140px;" onclick="sortInventory('item_name')">ITEM ⇅</th>
                     <th colspan="3" class="group-header bg-cost">ORDER BY</th>
                     <th colspan="2" class="group-header bg-stock">ITEMS / UNIT DETAILS</th>
                     <th rowspan="2" class="bg-cost">COST PER ITEM</th>
@@ -199,7 +200,7 @@ function renderInventory() {
         html += `
             <tbody>
                 <tr onclick="toggleInvCategory('${cat.replace(/'/g, "\\'")}')">
-                    <td colspan="14" class="cat-header">
+                    <td colspan="15" class="cat-header">
                         ${isCollapsed ? '▶' : '▼'} ${cat.toUpperCase()} (${groups[cat].length} Items)
                     </td>
                 </tr>
@@ -209,6 +210,7 @@ function renderInventory() {
                 const statusColor = (item.status === 'ORDER' || item.status === 'Order') ? '#dc3545' : '#28a745';
                 html += `
                     <tr>
+                        <td><input class="editable-input" type="text" id="inv_cat_${item._id}" value="${item.category}" style="width: 95%;"></td>
                         <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}" style="width: 95%;"></td>
                         
                         <td style="background-color: rgba(107, 36, 36, 0.15); border-left: 1px solid #6b2424;"><input class="editable-input small-input" type="text" id="inv_unit_${item._id}" value="${item.order_unit || 'Unit'}"></td>
@@ -228,7 +230,7 @@ function renderInventory() {
                         <td style="background-color: rgba(29, 75, 107, 0.2); font-weight: bold; text-align: center;"><span id="inv_status_${item._id}" style="color: ${statusColor};">${item.status || 'OK'}</span></td>
                         <td style="background-color: rgba(29, 75, 107, 0.2); border-right: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_reorder_qty_${item._id}" value="${item.reorder_quantity || 0}"></td>
                         
-                        <td><button style="width: 100%; padding: 5px;" onclick="updateInventoryItem('${item._id}', '${cat.replace(/'/g, "\\'")}')">Save</button></td>
+                        <td><button style="width: 100%; padding: 5px;" onclick="updateInventoryItem('${item._id}')">Save</button></td>
                     </tr>
                 `;
             });
@@ -239,10 +241,10 @@ function renderInventory() {
     document.getElementById('inventory-container').innerHTML = html;
 }
 
-async function updateInventoryItem(id, cat) {
+async function updateInventoryItem(id) {
     const payload = {
+        category: document.getElementById(`inv_cat_${id}`).value,
         item_name: document.getElementById(`inv_name_${id}`).value,
-        category: cat,
         order_unit: document.getElementById(`inv_unit_${id}`).value,
         order_quantity: parseInt(document.getElementById(`inv_order_qty_${id}`).value),
         unit_cost_copper: parseFloat(document.getElementById(`inv_order_cost_${id}`).value),

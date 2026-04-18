@@ -32,33 +32,27 @@ async def lifespan(app: FastAPI):
             with open("inventory.csv", mode="r", encoding="utf-8") as f:
                 reader = csv.reader(f)
                 lines = list(reader)
-                current_category = "Uncategorized"
                 
-                # Skip the two complex header rows
-                for row in lines[2:]:
+                # Skip the three layout header rows (indices 0, 1, 2)
+                for row in lines[3:]:
                     if not row or not any(row): continue
                     
-                    # If column 1 is filled, but others are mostly empty, it's a category header
-                    if row[0].strip() and all(cell.strip() == "" for cell in row[1:5]):
-                        current_category = row[0].strip()
-                        continue
-                    
-                    if len(row) >= 13:
+                    if len(row) >= 14:
                         inv_list.append({
-                            "item_name": row[0].strip(),
-                            "category": current_category,
-                            "order_unit": row[1].strip(),
-                            "order_quantity": parse_int(row[2]),
-                            "unit_cost_copper": parse_float(row[3]),
-                            "qty_per_unit": parse_int(row[4]),
-                            "serve_size": row[5].strip(),
-                            "cost_per_item_copper": parse_float(row[6]),
-                            "sell_price_copper": parse_float(row[7]),
-                            "margin_copper": parse_float(row[8]),
-                            "stock_unit_quantity": parse_int(row[9]),
-                            "reorder_level": parse_int(row[10]),
-                            "status": row[11].strip(),
-                            "reorder_quantity": parse_int(row[12])
+                            "category": row[0].strip(),
+                            "item_name": row[1].strip(),
+                            "order_unit": row[2].strip(),
+                            "order_quantity": parse_int(row[3]),
+                            "unit_cost_copper": parse_float(row[4]),
+                            "qty_per_unit": parse_int(row[5]),
+                            "serve_size": row[6].strip(),
+                            "cost_per_item_copper": parse_float(row[7]),
+                            "sell_price_copper": parse_float(row[8]),
+                            "margin_copper": parse_float(row[9]),
+                            "stock_unit_quantity": parse_int(row[10]),
+                            "reorder_level": parse_int(row[11]),
+                            "status": row[12].strip(),
+                            "reorder_quantity": parse_int(row[13])
                         })
             if inv_list:
                 db.inventory.insert_many(inv_list)
