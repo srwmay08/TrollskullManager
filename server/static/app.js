@@ -6,6 +6,77 @@ let npcSortCol = "first_name";
 let npcSortDir = 1;
 let collapsedFactions = {};
 
+// Calendar of Harptos State Variables
+let currentYear = 1492;
+let currentMonthIndex = 2; // Ches is index 2 (0-indexed)
+let currentDay = 30;
+let isHoliday = false;
+let currentHolidayName = "";
+let isShieldmeet = false;
+
+const harptosMonths = [
+    "Hammer", "Alturiak", "Ches", "Tarsakh", "Mirtul", "Kythorn",
+    "Flamerule", "Eleasis", "Eleint", "Marpenoth", "Uktar", "Nightal"
+];
+
+function getFormattedDate() {
+    if (isShieldmeet) {
+        return `Shieldmeet, ${currentYear} DR`;
+    }
+    if (isHoliday) {
+        return `${currentHolidayName}, ${currentYear} DR`;
+    }
+    return `${currentDay} ${harptosMonths[currentMonthIndex]}, ${currentYear} DR`;
+}
+
+function updateDateDisplay() {
+    document.getElementById('global_date_display').innerText = getFormattedDate();
+}
+
+function advanceDate() {
+    if (isShieldmeet) {
+        isShieldmeet = false;
+        isHoliday = false;
+        currentHolidayName = "";
+        currentMonthIndex = 7; // Eleasis
+        currentDay = 1;
+    } else if (isHoliday) {
+        if (currentHolidayName === "Midsummer" && (currentYear % 4 === 0)) {
+            isShieldmeet = true;
+            currentHolidayName = "Shieldmeet";
+            isHoliday = true; 
+        } else {
+            isHoliday = false;
+            currentHolidayName = "";
+            currentMonthIndex++;
+            if (currentMonthIndex > 11) {
+                currentMonthIndex = 0;
+                currentYear++;
+            }
+            currentDay = 1;
+        }
+    } else {
+        if (currentDay < 30) {
+            currentDay++;
+        } else {
+            if (currentMonthIndex === 0) { isHoliday = true; currentHolidayName = "Midwinter"; }
+            else if (currentMonthIndex === 3) { isHoliday = true; currentHolidayName = "Greengrass"; }
+            else if (currentMonthIndex === 6) { isHoliday = true; currentHolidayName = "Midsummer"; }
+            else if (currentMonthIndex === 8) { isHoliday = true; currentHolidayName = "Highharvestide"; }
+            else if (currentMonthIndex === 10) { isHoliday = true; currentHolidayName = "Feast of the Moon"; }
+            else {
+                currentMonthIndex++;
+                if (currentMonthIndex > 11) {
+                    currentMonthIndex = 0;
+                    currentYear++;
+                }
+                currentDay = 1;
+            }
+        }
+    }
+    updateDateDisplay();
+}
+
 function switchTab(tabId) {
     const tabs = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
@@ -20,10 +91,20 @@ function switchTab(tabId) {
 }
 
 async function rollOutcome() {
+    const current_date_payload = {
+        month: currentMonthIndex + 1, 
+        day: currentDay,
+        year: currentYear,
+        is_holiday: isHoliday,
+        holiday_name: isHoliday ? currentHolidayName : null,
+        is_shieldmeet: isShieldmeet
+    };
+
     const payload = {
         base_roll: parseInt(document.getElementById('base_roll').value),
         renown_bonus: parseInt(document.getElementById('renown_bonus').value),
-        environmental_bonus: parseInt(document.getElementById('env_bonus').value)
+        environmental_bonus: parseInt(document.getElementById('env_bonus').value),
+        current_date: current_date_payload
     };
 
     const response = await fetch(`${API_URL}/roll`, {
@@ -63,12 +144,7 @@ async function rollOutcome() {
 }
 
 async function saveDay() {
-    const dateStr = document.getElementById('global_date').value;
-    
-    if(!dateStr) {
-        alert("Please enter a Current Date in the top right corner.");
-        return;
-    }
+    const dateStr = getFormattedDate();
 
     const payload = {
         calendar_date: dateStr,
@@ -90,7 +166,7 @@ async function saveDay() {
 }
 
 async function submitManualSale() {
-    const dateStr = document.getElementById('global_date').value;
+    const dateStr = getFormattedDate();
     const payload = {
         item_name: document.getElementById('sale_item').value,
         quantity: parseInt(document.getElementById('sale_qty').value),
@@ -214,7 +290,7 @@ async function loadLedger() {
 }
 
 async function submitLedger() {
-    const dateStr = document.getElementById('global_date').value;
+    const dateStr = getFormattedDate();
     const payload = {
         entry_type: document.getElementById('ledger_type').value,
         description: document.getElementById('ledger_desc').value,
@@ -390,5 +466,6 @@ async function updateNpcItem(id) {
 }
 
 window.onload = function() {
+    updateDateDisplay();
     loadInventory();
 };

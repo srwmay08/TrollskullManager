@@ -11,8 +11,9 @@
     <div id="top-bar">
         <h1 style="margin:0; font-size: 24px;">Trollskull Manor</h1>
         <div class="top-right-controls">
-            <label for="global_date" style="margin:0;">Current Date:</label>
-            <input type="text" id="global_date" value="Ches 30">
+            <label style="margin:0; font-weight:bold;">Current Date:</label>
+            <span id="global_date_display" style="color: #d7ba7d; font-size: 16px; min-width: 180px; display:inline-block;"></span>
+            <button class="save-btn" style="background-color: #007acc;" onclick="advanceDate()">Advance Day</button>
             <button class="save-btn" onclick="saveDay()">Save Day to Ledger & Sales</button>
         </div>
     </div>
