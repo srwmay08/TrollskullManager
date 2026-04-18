@@ -15,6 +15,7 @@ class RollRequest(BaseModel):
     renown_bonus: int
     environmental_bonus: int
     current_date: Optional[HarptosState] = None
+    price_strategy: str = "Standard"
 
 class SaleItem(BaseModel):
     item_name: str
@@ -49,9 +50,13 @@ class SaveDayRequest(BaseModel):
 class NpcItem(BaseModel):
     first_name: str
     last_name: str
-    type: str
+    occupation: str
     lifestyle: str
-    affiliation: str
+    faction: str
     age: int
     bar_disposition: int
     party_disposition: int
+    nobility_status: str
+    noble_house: str
+    story_connection: str
+    pc_affiliation: str

@@ -127,41 +127,6 @@ async def lifespan(app: FastAPI):
                 "amount": 50.0,
                 "frequency": "Monthly",
                 "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Guild",
-                "description": "Vintners' Guild Partnership (Mertyn Bottlewick) Upfront",
-                "amount": 300.0,
-                "frequency": "Once",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Renovation",
-                "description": "Tally Fellbranch Ironwood Restoration",
-                "amount": 1200.0,
-                "frequency": "Once",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Guild",
-                "description": "Dungsweepers' Guild (Grubach) Contract",
-                "amount": 20.0,
-                "frequency": "Weekly",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Guild",
-                "description": "Vintners' Guild Weekly Fee",
-                "amount": 5.0,
-                "frequency": "Weekly",
-                "entry_date": "Ches 30"
-            },
-            {
-                "entry_type": "Tuition",
-                "description": "Murkledorn's Education (7 Urchins/Appleton Boys)",
-                "amount": 14.0,
-                "frequency": "Weekly",
-                "entry_date": "Ches 30"
             }
         ]
         db.ledger.insert_many(seed_ledger)
@@ -173,14 +138,18 @@ async def lifespan(app: FastAPI):
                 reader = csv.DictReader(f)
                 for row in reader:
                     npc_list.append({
-                        "last_name": row.get("Last Name", ""),
                         "first_name": row.get("First Name", ""),
-                        "type": row.get("Type", ""),
+                        "last_name": row.get("Last Name", ""),
+                        "occupation": row.get("Occupation", ""),
                         "lifestyle": row.get("Lifestyle", ""),
-                        "affiliation": row.get("Affiliation", ""),
+                        "faction": row.get("Faction", ""),
                         "age": parse_int(row.get("Age", "")),
                         "bar_disposition": parse_int(row.get("Bar Disposition", "")),
-                        "party_disposition": parse_int(row.get("Party Disposition", ""))
+                        "party_disposition": parse_int(row.get("Party Disposition", "")),
+                        "nobility_status": row.get("Nobility Status", "Civilian"),
+                        "noble_house": row.get("Noble House", ""),
+                        "story_connection": row.get("Story Connection", "None"),
+                        "pc_affiliation": row.get("PC Affiliation", "None")
                     })
             if npc_list:
                 db.npcs.insert_many(npc_list)

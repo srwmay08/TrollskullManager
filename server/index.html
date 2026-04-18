@@ -32,11 +32,11 @@
         
         <div class="stats-box">
             <div class="stat-card">
-                <h3>Total Capacity</h3>
-                <p>64 Seats</p>
+                <h3>Total Physical Capacity</h3>
+                <p>104 Max (inc. Standing)</p>
             </div>
             <div class="stat-card">
-                <h3>Main Floor</h3>
+                <h3>Main Floor Seats</h3>
                 <p>54 Seats (10 Bar, 44 Table)</p>
             </div>
             <div class="stat-card">
@@ -45,27 +45,55 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label>Base Roll (d100):</label>
-            <input type="number" id="base_roll" value="50">
-        </div>
-        <div class="form-group">
-            <label>Renown Bonus (+):</label>
-            <input type="number" id="renown_bonus" value="0">
-        </div>
-        <div class="form-group">
-            <label>Environmental Effects (+):</label>
-            <input type="number" id="env_bonus" value="0">
-        </div>
-        <button onclick="rollOutcome()">Generate Daily Outcome</button>
-        
-        <div id="outcome-result" style="margin-top: 20px; padding: 15px; background-color: #333; display: none;">
-            <h3 id="out-title">Result</h3>
-            <p id="out-desc"></p>
-            <p><strong>Main Floor Patrons:</strong> <span id="out-main"></span>/54</p>
-            <p><strong>VIP Patrons:</strong> <span id="out-vip"></span>/10</p>
-            <div class="auto-sales-list" id="out-sales"></div>
-            <div class="hourly-patrons-list" id="out-hourly"></div>
+        <div style="display:flex; gap: 20px;">
+            <div style="flex:1;">
+                <div class="form-group">
+                    <label>Menu Pricing Strategy:</label>
+                    <select id="price_strategy">
+                        <option value="Dive">Dive (Cheap, High Volume, High Brawl Risk)</option>
+                        <option value="Standard" selected>Standard (Balanced)</option>
+                        <option value="Premium">Premium (Comfortable/Wealthy Only)</option>
+                        <option value="Exclusive">Exclusive (Wealthy/Aristocratic Only)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Base Roll (d100):</label>
+                    <input type="number" id="base_roll" value="50">
+                </div>
+                <div class="form-group">
+                    <label>Renown Bonus (+):</label>
+                    <input type="number" id="renown_bonus" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Environmental Effects (+):</label>
+                    <input type="number" id="env_bonus" value="0">
+                </div>
+                <button onclick="rollOutcome()">Generate Daily Outcome</button>
+            </div>
+            
+            <div style="flex:2;" id="outcome-result" style="display: none; padding: 15px; background-color: #333; border-radius: 4px;">
+                <h3 id="out-title">Result</h3>
+                <p id="out-desc" style="color:#d7ba7d; font-weight:bold;"></p>
+                
+                <div class="auto-sales-list" id="out-sales"></div>
+                
+                <h4 style="margin-top:20px;">Hourly Simulation Log</h4>
+                <table style="font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th>Hour</th>
+                            <th>Arrivals</th>
+                            <th>Table (44)</th>
+                            <th>Bar (10)</th>
+                            <th>VIP (10)</th>
+                            <th>Stand (Var)</th>
+                            <th>Incident?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="out-hourly">
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -132,7 +160,7 @@
         <h2>NPC Management & Dispositions</h2>
         <p>Edit fields directly and click save on the row to update. Click headers to sort. Click Faction rows to collapse/expand.</p>
         <button onclick="loadNpcs()">Refresh NPC List</button>
-        <div id="npc-container" style="margin-top: 20px;"></div>
+        <div id="npc-container" style="margin-top: 20px; overflow-x: auto;"></div>
     </div>
 
     <div id="ledger" class="tab-content">
@@ -147,11 +175,9 @@
                     <select id="ledger_type">
                         <option value="Income">Income / Windfall</option>
                         <option value="Expense">General Expense</option>
-                        <option value="Guild">Guild Contracts (Vintner/Dungsweepers)</option>
-                        <option value="Renovation">Renovation / Upkeep (Carpenters/Masons)</option>
+                        <option value="Guild">Guild Contracts</option>
+                        <option value="Renovation">Renovation</option>
                         <option value="PettyCash">Petty Cash</option>
-                        <option value="Tuition">Apprentice Tuition (Murkledorn's)</option>
-                        <option value="Maintenance">Hounds Upkeep (Loki & Odin)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -167,7 +193,7 @@
                     <select id="ledger_freq">
                         <option value="Once">One-Time</option>
                         <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly (Tenday)</option>
+                        <option value="Weekly">Weekly</option>
                         <option value="Monthly">Monthly</option>
                     </select>
                 </div>

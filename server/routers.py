@@ -45,116 +45,170 @@ def calculate_tavern_outcome(request: RollRequest):
             is_shieldmeet = True
 
     outcome = "Standard Day"
-    patrons = 0
-    vip_patrons = 0
+    total_expected_patrons = 0
 
     if total_roll <= 20:
-        outcome = "Disaster: A brawl broke out. Empty tavern."
-        patrons = random.randint(0, 10)
+        outcome = "Disaster: Poor word of mouth."
+        total_expected_patrons = random.randint(5, 20)
     elif total_roll <= 40:
         outcome = "Poor Day: Slow business."
-        patrons = random.randint(10, 20)
+        total_expected_patrons = random.randint(20, 40)
     elif total_roll <= 60:
         outcome = "Average Day: Modest crowd."
-        patrons = random.randint(20, 40)
+        total_expected_patrons = random.randint(40, 80)
     elif total_roll <= 80:
         outcome = "Good Day: Busy tavern."
-        patrons = random.randint(40, 54)
+        total_expected_patrons = random.randint(80, 120)
     else:
         outcome = "Windfall: The tavern is packed!"
-        patrons = 54
+        total_expected_patrons = random.randint(120, 180)
 
-    patrons = int((patrons * demand_multiplier) - winter_penalty)
-    if patrons < 0:
-        patrons = 0
-        
+    total_expected_patrons = int((total_expected_patrons * demand_multiplier) - winter_penalty)
+    if total_expected_patrons < 0:
+        total_expected_patrons = 0
+
     if is_shieldmeet:
         outcome = "SHIELDMEET: Absolute chaos, maximum capacity!"
     elif is_feast_of_moon:
         outcome = f"{outcome} (Feast of the Moon Event)"
 
-    if total_roll > 60:
-        vip_check = random.randint(1, 20)
-        if vip_check >= 14:
-            vip_fullness = random.randint(1, 100)
-            vip_patrons = max(1, int((vip_fullness / 100.0) * 10))
-            vip_patrons = int(vip_patrons * demand_multiplier)
-
-    friendly_npcs = list(db.npcs.find({"bar_disposition": {"$gt": 0}}))
-    neutral_npcs = list(db.npcs.find({"bar_disposition": 0}))
+    # Pricing Strategy Adjustments
+    strategy = request.price_strategy
+    brawl_chance = 0.05
+    allowed_lifestyles = []
     
-    daily_npcs = []
-    total_visitors = patrons + vip_patrons
-    for _ in range(total_visitors):
-        if friendly_npcs and random.random() < 0.8:
-            daily_npcs.append(random.choice(friendly_npcs))
-        elif neutral_npcs:
-            daily_npcs.append(random.choice(neutral_npcs))
+    if strategy == "Dive":
+        outcome += " (Dive Pricing: High volume, high friction)"
+        total_expected_patrons = int(total_expected_patrons * 1.5)
+        allowed_lifestyles = ["Squalid", "Poor", "Modest"]
+        brawl_chance = 0.25
+    elif strategy == "Standard":
+        allowed_lifestyles = ["Poor", "Modest", "Comfortable", "Wealthy"]
+    elif strategy == "Premium":
+        outcome += " (Premium Pricing: Reduced volume, higher margins)"
+        total_expected_patrons = int(total_expected_patrons * 0.7)
+        allowed_lifestyles = ["Comfortable", "Wealthy", "Aristocratic"]
+    elif strategy == "Exclusive":
+        outcome += " (Exclusive Pricing: Very low volume, extreme margins)"
+        total_expected_patrons = int(total_expected_patrons * 0.4)
+        allowed_lifestyles = ["Wealthy", "Aristocratic"]
 
-    hours = ["12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM"]
-    hour_assignments = {h: [] for h in hours}
-    
-    for npc in daily_npcs:
-        arrive_hour = random.choice(hours)
-        name = f"{npc.get('first_name', '')} {npc.get('last_name', '')}".strip()
-        if not name:
-            name = "Unknown Patron"
-        hour_assignments[arrive_hour].append(name)
-
-    hourly_breakdown = []
-    for h in hours:
-        hourly_breakdown.append({"hour": h, "patrons": hour_assignments[h]})
-
-    ale_qty = 0
-    food_qty = 0
-    premium_qty = 0
-
-    for npc in daily_npcs:
-        lifestyle = npc.get("lifestyle", "Modest")
-        if lifestyle == "Wealthy":
-            premium_qty += random.randint(1, 3)
-            food_qty += random.randint(0, 1)
-        elif lifestyle == "Comfortable":
-            ale_qty += random.randint(1, 2)
-            food_qty += random.randint(0, 1)
-            premium_qty += random.randint(0, 1)
-        else:
-            ale_qty += random.randint(1, 3)
-            if random.random() > 0.5:
-                food_qty += 1
-
-    generated_sales = []
-    
-    if is_feast_of_moon and ale_qty > 0:
-        generated_sales.append({"item_name": "Commemorative Feast Ale", "quantity": ale_qty, "total_price": ale_qty * 1.5})
-        ale_qty = 0
+    all_npcs = list(db.npcs.find())
+    valid_npcs = [npc for npc in all_npcs if npc.get("lifestyle", "Modest") in allowed_lifestyles]
+    if not valid_npcs:
+        valid_npcs = all_npcs # Fallback if database is misconfigured
         
-    if is_winter and food_qty > 0:
-        generated_sales.append({"item_name": "Hot Stew & Mulled Wine", "quantity": food_qty, "total_price": food_qty * 2.5})
-        food_qty = 0
+    daily_visitors = []
+    for _ in range(total_expected_patrons):
+        daily_visitors.append(random.choice(valid_npcs))
 
-    if ale_qty > 0:
-        generated_sales.append({"item_name": "Standard Ale/Drinks", "quantity": ale_qty, "total_price": ale_qty * 0.5})
-    if food_qty > 0:
-        generated_sales.append({"item_name": "Tavern Fare", "quantity": food_qty, "total_price": food_qty * 1.5})
-    if premium_qty > 0:
-        generated_sales.append({"item_name": "Premium VIP Drinks", "quantity": premium_qty, "total_price": premium_qty * 5.0})
+    hours = ["12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM", "7 PM", "8 PM", "9 PM", "10 PM", "11 PM"]
+    
+    cap_tables = 44
+    cap_bar = 10
+    cap_vip = 10
+    cap_stand = random.randint(20, 40)
+    
+    active_patrons = []
+    hourly_logs = []
+    total_sales_generated = []
+    
+    total_revenue_pool = 0.0
+
+    for current_hour_idx, hr in enumerate(hours):
+        # Remove patrons whose duration is up
+        active_patrons = [p for p in active_patrons if p["departure_idx"] > current_hour_idx]
+        
+        # Determine arrivals for this hour
+        arrivals_count = int(total_expected_patrons / len(hours))
+        # Add some variance
+        arrivals_count = max(0, arrivals_count + random.randint(-2, 5))
+        
+        arrivals_this_hour = []
+        for _ in range(arrivals_count):
+            if daily_visitors:
+                visitor = daily_visitors.pop(0)
+                duration = random.randint(1, 3)
+                
+                # Try to seat them
+                seated_at = "Bounced"
+                lifestyle = visitor.get("lifestyle", "Modest")
+                
+                current_vips = len([p for p in active_patrons if p["seat"] == "VIP"])
+                current_tables = len([p for p in active_patrons if p["seat"] == "Table"])
+                current_bars = len([p for p in active_patrons if p["seat"] == "Bar"])
+                current_stands = len([p for p in active_patrons if p["seat"] == "Standing"])
+                
+                if lifestyle in ["Wealthy", "Aristocratic"] and current_vips < cap_vip:
+                    seated_at = "VIP"
+                elif lifestyle in ["Wealthy", "Aristocratic"] and current_tables < cap_tables:
+                    seated_at = "Table"
+                elif lifestyle in ["Wealthy", "Aristocratic"]:
+                    seated_at = "Bounced" # Rich refuse to stand or sit at bar
+                elif current_tables < cap_tables:
+                    seated_at = "Table"
+                elif current_bars < cap_bar:
+                    seated_at = "Bar"
+                elif current_stands < cap_stand:
+                    seated_at = "Standing"
+                
+                if seated_at != "Bounced":
+                    active_patrons.append({
+                        "name": f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip(),
+                        "lifestyle": lifestyle,
+                        "seat": seated_at,
+                        "departure_idx": current_hour_idx + duration
+                    })
+                    arrivals_this_hour.append(visitor)
+                    
+                    # Calculate spend
+                    spend = 0.0
+                    if lifestyle == "Squalid" or lifestyle == "Poor":
+                        spend = random.uniform(0.1, 0.3)
+                    elif lifestyle == "Modest":
+                        spend = random.uniform(0.5, 1.5)
+                    elif lifestyle == "Comfortable":
+                        spend = random.uniform(2.0, 4.0)
+                    elif lifestyle == "Wealthy":
+                        spend = random.uniform(5.0, 10.0)
+                    elif lifestyle == "Aristocratic":
+                        spend = random.uniform(15.0, 50.0)
+                        
+                    total_revenue_pool += spend
+
+        # Compile hour stats
+        log_entry = {
+            "hour": hr,
+            "arrivals": len(arrivals_this_hour),
+            "table_used": len([p for p in active_patrons if p["seat"] == "Table"]),
+            "bar_used": len([p for p in active_patrons if p["seat"] == "Bar"]),
+            "vip_used": len([p for p in active_patrons if p["seat"] == "VIP"]),
+            "stand_used": len([p for p in active_patrons if p["seat"] == "Standing"]),
+            "brawls": 1 if random.random() < brawl_chance and len(active_patrons) > 20 else 0
+        }
+        hourly_logs.append(log_entry)
+
+    # Condense sales into categories
+    total_sales_generated.append({
+        "item_name": f"{strategy} Service Food & Drink", 
+        "quantity": total_expected_patrons, 
+        "total_price": total_revenue_pool
+    })
 
     result = {
         "total_roll": total_roll,
         "staff_bonus_applied": total_staff_bonus,
         "outcome": outcome,
-        "main_patrons": patrons,
-        "vip_patrons": vip_patrons,
-        "auto_sales": generated_sales,
-        "hourly_breakdown": hourly_breakdown
+        "main_patrons": total_expected_patrons,
+        "vip_patrons": 0, # integrated into hourly logs
+        "auto_sales": total_sales_generated,
+        "hourly_breakdown": hourly_logs
     }
     return result
 
 @router.post("/api/save_day")
 def save_day_data(request: SaveDayRequest):
     date_str = request.calendar_date
-    
     for sale in request.sales:
         sale.sale_date = date_str
         sale_dict = sale.dict()
