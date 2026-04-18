@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -183,6 +184,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -265,7 +268,7 @@ def load_clean_npcs(include_fieldnames=False):
     clean_lines = []
     buffer = ""
     for line in lines:
-        line = re.sub(r'\\s*', '', line).strip()
+        line = re.sub(r'\s*', '', line).strip()
         if not line:
             continue
         if buffer:
@@ -324,8 +327,10 @@ def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing,
         try:
             b_val = str(n.get("Bar Disposition", "0")).strip()
             p_val = str(n.get("Party Disposition", "0")).strip()
-            if not b_val: b_val = "0"
-            if not p_val: p_val = "0"
+            if not b_val:
+                b_val = "0"
+            if not p_val:
+                p_val = "0"
             if int(b_val) + int(p_val) > -20:
                 willing_npcs.append(n)
         except ValueError:
@@ -336,10 +341,14 @@ def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing,
     quest_npcs = []
     drinkers = []
     for n in willing_npcs:
-        try: mq = int(n.get("MAIN QUEST NPC", 0))
-        except: mq = 0
-        try: sq = int(n.get("SIDE QUEST NPC", 0))
-        except: sq = 0
+        try:
+            mq = int(n.get("MAIN QUEST NPC", 0))
+        except:
+            mq = 0
+        try:
+            sq = int(n.get("SIDE QUEST NPC", 0))
+        except:
+            sq = 0
         
         if mq == 1 or sq == 1:
             quest_npcs.append(n)
@@ -365,7 +374,8 @@ def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing,
         current_count = 0
         while current_count < target_size:
             g_size = random.randint(1, min(5, target_size - current_count))
-            if g_size <= 0: break
+            if g_size <= 0:
+                break
             
             members = []
             
@@ -375,18 +385,27 @@ def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing,
                     first = str(n.get("First Name", "")).strip()
                     last = str(n.get("Last Name", "")).strip()
                     name = f"{first} {last}".strip()
-                    if not name: name = "Unknown Patron"
+                    if not name:
+                        name = "Unknown Patron"
                     affil = n.get("Affiliation", "")
                     occ = n.get("Occupation", "")
                     life = n.get("Lifestyle", "")
-                    try: b_disp = int(n.get("Bar Disposition", 0))
-                    except: b_disp = 0
-                    try: p_disp = int(n.get("Party Disposition", 0))
-                    except: p_disp = 0
-                    try: mq = int(n.get("MAIN QUEST NPC", 0))
-                    except: mq = 0
-                    try: sq = int(n.get("SIDE QUEST NPC", 0))
-                    except: sq = 0
+                    try:
+                        b_disp = int(n.get("Bar Disposition", 0))
+                    except:
+                        b_disp = 0
+                    try:
+                        p_disp = int(n.get("Party Disposition", 0))
+                    except:
+                        p_disp = 0
+                    try:
+                        mq = int(n.get("MAIN QUEST NPC", 0))
+                    except:
+                        mq = 0
+                    try:
+                        sq = int(n.get("SIDE QUEST NPC", 0))
+                    except:
+                        sq = 0
                     idx = n.get("_csv_index", -1)
                 else:
                     title = random.choice(generics)
@@ -394,8 +413,10 @@ def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing,
                     affil = "None"
                     occ = title
                     life = "Modest"
-                    if title in ["Nobleman", "Merchant", "Guildsman"]: life = "Wealthy"
-                    elif title in ["Beggar"]: life = "Squalid"
+                    if title in ["Nobleman", "Merchant", "Guildsman"]:
+                        life = "Wealthy"
+                    elif title in ["Beggar"]:
+                        life = "Squalid"
                     b_disp, p_disp, mq, sq, idx = 0, 0, 0, 0, -1
                     
                 members.append({
@@ -421,14 +442,18 @@ def simulate_npc_visitors(target_vip, target_table, target_bar, target_standing,
             for m in members:
                 m_life = str(m.get("lifestyle", "")).lower()
                 mult = 1.0
-                if "wealthy" in m_life or "aristocratic" in m_life or "noble" in m_life: mult = 2.5
-                elif "modest" in m_life: mult = 0.8
-                elif "squalid" in m_life: mult = 0.5
+                if "wealthy" in m_life or "aristocratic" in m_life or "noble" in m_life:
+                    mult = 2.5
+                elif "modest" in m_life:
+                    mult = 0.8
+                elif "squalid" in m_life:
+                    mult = 0.5
                     
                 num_items = random.randint(1, 3)
                 for _ in range(num_items):
                     avail = [k for k, v in temp_stock.items() if v > 0]
-                    if not avail: break
+                    if not avail:
+                        break
                     choice = random.choice(avail)
                     temp_stock[choice] -= 1
                     cost = item_prices[choice] * mult
@@ -583,8 +608,10 @@ def save_day_data(request: SaveDayRequest):
         
         for row in inv_list:
             if row["Item Name"] == sale.item_name:
-                try: curr = int(row.get("Stock on Hand", 0))
-                except: curr = 0
+                try:
+                    curr = int(row.get("Stock on Hand", 0))
+                except:
+                    curr = 0
                 row["Stock on Hand"] = str(max(0, curr - sale.quantity))
                 break
                 
@@ -729,8 +756,10 @@ def adjust_npc_disposition(req: NPCDispositionUpdate):
     for row in npcs:
         if row.get("_csv_index") == req.index:
             target_col = "Bar Disposition" if req.disp_type == 'bar' else "Party Disposition"
-            try: curr = int(row.get(target_col, 0))
-            except: curr = 0
+            try:
+                curr = int(row.get(target_col, 0))
+            except:
+                curr = 0
             row[target_col] = str(curr + req.delta)
             break
     save_npcs_to_csv(npcs, fieldnames)

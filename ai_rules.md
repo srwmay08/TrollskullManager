@@ -45,3 +45,14 @@
       from stuff import thing
 
       ```
+
+## 5. LANGUAGE-SPECIFIC LOGIC
+
+* **PYTHON (PEP 8+):** * Always include type hints.
+    * Use f-strings for string formatting.
+    * Ensure a blank line between functions and two blank lines between classes.
+
+* **JAVASCRIPT (ES6+):**
+    * Use strict equality (`===`) exclusively.
+    * Prefer `async/await` for asynchronous operations.
+    * Use PascalCase for Classes and camelCase for variables/functions.
