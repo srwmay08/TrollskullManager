@@ -13,160 +13,80 @@
             padding: 20px;
             padding-top: 80px;
         }
-        h1, h2, h3 {
-            color: #d7ba7d;
-        }
+        h1, h2, h3 { color: #d7ba7d; }
         #top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background-color: #252526;
-            padding: 15px 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 1000;
-            box-sizing: border-box;
+            position: fixed; top: 0; left: 0; width: 100%; background-color: #252526;
+            padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 1000; box-sizing: border-box;
         }
-        .top-right-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
+        .top-right-controls { display: flex; gap: 15px; align-items: center; }
         .top-right-controls input {
-            width: 150px;
-            background-color: #3c3c3c;
-            color: #fff;
-            border: 1px solid #555;
-            padding: 8px;
-            border-radius: 4px;
+            width: 150px; background-color: #3c3c3c; color: #fff;
+            border: 1px solid #555; padding: 8px; border-radius: 4px;
         }
         .save-btn {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 4px;
+            background-color: #28a745; color: white; border: none;
+            padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px;
         }
-        .save-btn:hover {
-            background-color: #218838;
-        }
+        .save-btn:hover { background-color: #218838; }
         nav {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
+            display: flex; gap: 10px; margin-bottom: 20px;
+            border-bottom: 2px solid #333; padding-bottom: 10px;
         }
         button {
-            background-color: #007acc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 14px;
-            border-radius: 4px;
+            background-color: #007acc; color: white; border: none;
+            padding: 10px 20px; cursor: pointer; font-size: 14px; border-radius: 4px;
         }
-        button:hover {
-            background-color: #005f9e;
-        }
+        button:hover { background-color: #005f9e; }
         .disp-btn {
-            padding: 2px 6px;
-            margin-left: 5px;
-            font-size: 12px;
-            cursor: pointer;
-            border-radius: 3px;
-            border: none;
+            padding: 2px 6px; margin-left: 2px; font-size: 12px;
+            cursor: pointer; border-radius: 3px; border: none;
         }
         .disp-btn.plus { background-color: #28a745; color: white; }
-        .disp-btn.minus { background-color: #dc3545; color: white; }
+        .disp-btn.minus { background-color: #dc3545; color: white; margin-right: 10px;}
         
-        .tab-content {
-            display: none;
-            background-color: #252526;
-            padding: 20px;
-            border-radius: 4px;
+        .badge {
+            padding: 2px 5px; border-radius: 3px; font-size: 0.75em;
+            font-weight: bold; margin-left: 5px; display: inline-block;
         }
-        .active-tab {
-            display: block;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
+        .badge-main { background-color: #dc3545; color: white; }
+        .badge-side { background-color: #007acc; color: white; }
+
+        .hour-row { cursor: pointer; background-color: #333; transition: background 0.2s;}
+        .hour-row:hover { background-color: #444; }
+        .details-row { display: none; background-color: #252526; }
+        .crown-icon { width: 16px; height: 16px; vertical-align: sub; margin-right: 4px; }
+        
+        .tab-content { display: none; background-color: #252526; padding: 20px; border-radius: 4px; }
+        .active-tab { display: block; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
         input, select {
-            width: 100%;
-            padding: 8px;
-            background-color: #3c3c3c;
-            color: white;
-            border: 1px solid #555;
-            border-radius: 4px;
-            box-sizing: border-box;
+            width: 100%; padding: 8px; background-color: #3c3c3c;
+            color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
+        th { background-color: #333; cursor: pointer; }
+        th:hover { background-color: #444; }
+        .editable-input { width: 90%; background: transparent; border: 1px solid transparent; color: #d7ba7d; }
+        .editable-input:focus { border: 1px solid #007acc; background: #1e1e1e; }
+        .stats-box { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-card { background-color: #333; padding: 15px; border-radius: 4px; flex: 1; text-align: center; }
+        .stat-card h3 { margin: 0 0 10px 0; color: #d7ba7d; }
+        .auto-sales-list { background-color: #1e1e1e; padding: 10px; border-left: 4px solid #007acc; margin-top: 10px; }
+        .income-text { color: #28a745; font-weight: bold; }
+        .expense-text { color: #dc3545; font-weight: bold; }
+        .receipt-box {
+            background: #111; padding: 8px; border-radius: 4px; font-family: monospace;
+            font-size: 13px; margin-top: 5px;
         }
-        th, td {
-            border: 1px solid #444;
-            padding: 10px;
-            text-align: left;
+        .dashboard-controls {
+            display: flex; gap: 10px; align-items: flex-end; background: #333; 
+            padding: 15px; border-radius: 4px; margin-bottom: 20px;
         }
-        th {
-            background-color: #333;
-            cursor: pointer;
-        }
-        th:hover {
-            background-color: #444;
-        }
-        .editable-input {
-            width: 90%;
-            background: transparent;
-            border: 1px solid transparent;
-            color: #d7ba7d;
-        }
-        .editable-input:focus {
-            border: 1px solid #007acc;
-            background: #1e1e1e;
-        }
-        .stats-box {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            background-color: #333;
-            padding: 15px;
-            border-radius: 4px;
-            flex: 1;
-            text-align: center;
-        }
-        .stat-card h3 {
-            margin: 0 0 10px 0;
-            color: #d7ba7d;
-        }
-        .auto-sales-list {
-            background-color: #1e1e1e;
-            padding: 10px;
-            border-left: 4px solid #007acc;
-            margin-top: 10px;
-        }
-        .income-text {
-            color: #28a745;
-            font-weight: bold;
-        }
-        .expense-text {
-            color: #dc3545;
-            font-weight: bold;
-        }
+        .dashboard-controls .form-group { margin-bottom: 0; flex: 1; }
     </style>
 </head>
 <body>
@@ -182,7 +102,6 @@
 
     <nav>
         <button onclick="switchTab('dashboard')">DASHBOARD</button>
-        <button onclick="switchTab('sales')">SALES (Manual)</button>
         <button onclick="switchTab('inventory')">INVENTORY</button>
         <button onclick="switchTab('staff')">STAFF</button>
         <button onclick="switchTab('ledger')">LEDGER</button>
@@ -193,35 +112,38 @@
     <div id="dashboard" class="tab-content active-tab">
         <h2>Tavern Status & Operations</h2>
         
-        <div class="form-group">
-            <label>Base Roll (d100):</label>
-            <input type="number" id="base_roll" value="50">
+        <div class="dashboard-controls">
+            <div class="form-group">
+                <label>Base Roll (d100):</label>
+                <input type="number" id="base_roll" value="50">
+            </div>
+            <div class="form-group">
+                <label>Renown Bonus (+):</label>
+                <input type="number" id="renown_bonus" value="0">
+            </div>
+            <div class="form-group">
+                <label>Environmental Effects (+):</label>
+                <input type="number" id="env_bonus" value="0">
+            </div>
+            <button onclick="rollOutcome()" style="height: 35px; margin-bottom: 2px;">Generate Daily Outcome</button>
         </div>
-        <div class="form-group">
-            <label>Renown Bonus (+):</label>
-            <input type="number" id="renown_bonus" value="0">
-        </div>
-        <div class="form-group">
-            <label>Environmental Effects (+):</label>
-            <input type="number" id="env_bonus" value="0">
-        </div>
-        <button onclick="rollOutcome()">Generate Daily Outcome</button>
         
-        <div id="outcome-result" style="margin-top: 20px; padding: 15px; background-color: #333; display: none;">
+        <div id="outcome-result" style="padding: 15px; background-color: #333; display: none;">
             <h3 id="out-title">Result</h3>
             <p id="out-desc"></p>
+            <p style="font-size:0.9em; color:#aaa;">The totals below represent the unique, total daily patrons assigned to these sections. Expand the hourly breakdown below to view who is physically present at a given hour.</p>
             
             <div class="stats-box" style="margin-top:15px;">
                 <div class="stat-card">
-                    <h3>Tables (44)</h3>
+                    <h3>Tables (Daily Total)</h3>
                     <p id="out-tables">0 / 44</p>
                 </div>
                 <div class="stat-card">
-                    <h3>Bar (10)</h3>
+                    <h3>Bar (Daily Total)</h3>
                     <p id="out-bar">0 / 10</p>
                 </div>
                 <div class="stat-card">
-                    <h3>VIP (10)</h3>
+                    <h3>VIP (Daily Total)</h3>
                     <p id="out-vip">0 / 10</p>
                 </div>
                 <div class="stat-card">
@@ -230,45 +152,36 @@
                 </div>
             </div>
             
+            <h3 style="margin-top:20px;">Daily Tavern Ledger (Items Sold to Patrons)</h3>
+            <p style="font-size:0.85em; color:#aaa;">This exact list is deducted from Inventory stock when you "Save Day".</p>
             <div class="auto-sales-list" id="out-sales"></div>
 
-            <h3 style="margin-top: 20px;">Named NPC Visitors (Grouped)</h3>
+            <h3 style="margin-top: 20px;">Detailed Group Receipts</h3>
             <div id="out-npc-groups"></div>
             
-            <h3 style="margin-top: 20px;">Hourly Breakdown</h3>
+            <h3 style="margin-top: 20px;">Hourly Breakdown (Click to Expand)</h3>
             <table style="width: 100%; margin-top: 10px;">
-                <thead>
-                    <tr>
-                        <th style="width: 15%;">Hour</th>
-                        <th>Present NPCs</th>
-                    </tr>
-                </thead>
                 <tbody id="out-npc-hourly">
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div id="sales" class="tab-content">
-        <h2>Record a Manual Sale</h2>
-        <div class="form-group">
-            <label>Item Name:</label>
-            <input type="text" id="sale_item">
-        </div>
-        <div class="form-group">
-            <label>Quantity:</label>
-            <input type="number" id="sale_qty" value="1">
-        </div>
-        <div class="form-group">
-            <label>Total Price (gp):</label>
-            <input type="number" id="sale_price" value="0.0" step="0.1">
-        </div>
-        <button onclick="submitManualSale()">Record Sale</button>
-    </div>
-
     <div id="inventory" class="tab-content">
         <h2>Inventory Management</h2>
-        <p>Edit fields directly and click save on the row to update.</p>
+        <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
+            <h3>Add New Inventory Item</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:2;"><label>Item Name:</label><input type="text" id="new_inv_name"></div>
+                <div class="form-group" style="flex:1;"><label>Stock on Hand:</label><input type="number" id="new_inv_hand" value="0"></div>
+                <div class="form-group" style="flex:1;"><label>Stock on Order:</label><input type="number" id="new_inv_order" value="0"></div>
+                <div class="form-group" style="flex:1;"><label>Units Per:</label><input type="number" id="new_inv_per" value="1"></div>
+                <div class="form-group" style="flex:1;"><label>Unit Price (gp):</label><input type="number" id="new_inv_price" value="0.0" step="0.1"></div>
+            </div>
+            <button onclick="addInventory()">Add Item</button>
+        </div>
+
+        <p>Edit fields directly and click save on the row to update. <strong>Saving a Day will automatically subtract sold items from Stock on Hand and auto-restock empty items!</strong></p>
         <button onclick="loadInventory()">Refresh Inventory List</button>
         <table>
             <thead>
@@ -384,6 +297,8 @@
                 <div class="form-group" style="flex:1;"><label>Lifestyle:</label><input type="text" id="new_npc_life"></div>
                 <div class="form-group" style="flex:0.5;"><label>Bar Disp:</label><input type="number" id="new_npc_bar" value="0"></div>
                 <div class="form-group" style="flex:0.5;"><label>Party Disp:</label><input type="number" id="new_npc_party" value="0"></div>
+                <div class="form-group" style="flex:0.5;"><label>Main Q:</label><input type="number" id="new_npc_mq" value="0" min="0" max="1"></div>
+                <div class="form-group" style="flex:0.5;"><label>Side Q:</label><input type="number" id="new_npc_sq" value="0" min="0" max="1"></div>
             </div>
             <button onclick="addNPC()">Add NPC</button>
         </div>
@@ -400,6 +315,8 @@
                     <th onclick="sortTable('npcTable', 4)">Lifestyle</th>
                     <th onclick="sortTable('npcTable', 5, true)">Bar Disp</th>
                     <th onclick="sortTable('npcTable', 6, true)">Party Disp</th>
+                    <th onclick="sortTable('npcTable', 7, true)">Main Q</th>
+                    <th onclick="sortTable('npcTable', 8, true)">Side Q</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -409,7 +326,7 @@
     </div>
 
     <div id="reports" class="tab-content">
-        <h2>Business Reporting</h2>
+        <h2>Business Reporting & Analytics</h2>
         <button onclick="loadReports()">Generate Overview Report</button>
         <div id="report-output" style="margin-top: 20px;"></div>
     </div>
@@ -429,6 +346,19 @@
             if(tabId === 'staff') loadStaff();
             if(tabId === 'ledger') loadLedger();
             if(tabId === 'npcs') loadNPCs();
+            if(tabId === 'reports') loadReports();
+        }
+
+        function toggleHour(hourId) {
+            const row = document.getElementById(hourId);
+            const prevRow = row.previousElementSibling;
+            if (row.style.display === 'table-row') {
+                row.style.display = 'none';
+                prevRow.cells[0].innerHTML = prevRow.cells[0].innerHTML.replace('▼', '▶');
+            } else {
+                row.style.display = 'table-row';
+                prevRow.cells[0].innerHTML = prevRow.cells[0].innerHTML.replace('▶', '▼');
+            }
         }
 
         async function rollOutcome() {
@@ -450,44 +380,68 @@
             document.getElementById('out-title').innerText = `Roll: ${data.total_roll} (Includes +${data.staff_bonus_applied} Staff Bonus)`;
             document.getElementById('out-desc').innerText = data.outcome;
             
-            const tableSeats = Math.min(data.main_patrons, 44);
-            const barSeats = Math.max(0, data.main_patrons - 44);
-            
-            document.getElementById('out-tables').innerText = `${tableSeats} / 44`;
-            document.getElementById('out-bar').innerText = `${barSeats} / 10`;
+            document.getElementById('out-tables').innerText = `${data.table_patrons} / 44`;
+            document.getElementById('out-bar').innerText = `${data.bar_patrons} / 10`;
             document.getElementById('out-vip').innerText = `${data.vip_patrons} / 10`;
             document.getElementById('out-standing').innerText = `${data.standing_patrons} / ${data.max_standing}`;
             
             pendingAutoSales = data.auto_sales;
             
-            let salesHtml = "<strong>Auto-Generated Sales based on patrons:</strong><ul>";
-            if (pendingAutoSales.length === 0) salesHtml += "<li>None.</li>";
-            else pendingAutoSales.forEach(s => salesHtml += `<li>${s.quantity}x ${s.item_name} for ${s.total_price.toFixed(2)} gp</li>`);
-            salesHtml += "</ul>";
+            let salesHtml = "<ul>";
+            let sumTotal = 0;
+            if (pendingAutoSales.length === 0) salesHtml += "<li>None. (No inventory to sell)</li>";
+            else {
+                pendingAutoSales.forEach(s => {
+                    salesHtml += `<li>${s.quantity}x ${s.item_name} = <span class="income-text">+${s.total_price.toFixed(2)} gp</span></li>`;
+                    sumTotal += s.total_price;
+                });
+            }
+            salesHtml += `</ul><div style="font-size:18px; margin-left:15px; font-weight:bold;">Tavern Gross Sales: <span class="income-text">+${sumTotal.toFixed(2)} gp</span></div>`;
             document.getElementById('out-sales').innerHTML = salesHtml;
 
             let npcGroupsHtml = "";
             if (data.npc_groups && data.npc_groups.length > 0) {
-                npcGroupsHtml += "<table><thead><tr><th>Group Loc</th><th>Group Size</th><th>Members</th><th>Time</th><th>Total Spend</th></tr></thead><tbody>";
+                npcGroupsHtml += "<table><thead><tr><th>Group Loc</th><th>Group Size</th><th>Members</th><th>Time</th><th>Receipt Total</th></tr></thead><tbody>";
                 data.npc_groups.forEach(g => {
                     let membersListHtml = g.members_data.map(m => {
                         const isNoble = m.lifestyle.toLowerCase().match(/aristocratic|wealthy|noble/);
-                        const nobleSym = isNoble ? "👑" : "";
-                        const details = (m.affiliation || m.occupation) ? `[${m.affiliation || 'No Faction'} - ${m.occupation || 'Civilian'}]` : "";
-                        return `<div style="margin-bottom:4px;">
-                            ${nobleSym} <strong>${m.name}</strong> ${details} 
-                            (Disp: <span id="disp_${m.index}">${m.bar_disposition}</span>
-                            <button class="disp-btn plus" onclick="adjustDisp(${m.index}, 1)">+</button>
-                            <button class="disp-btn minus" onclick="adjustDisp(${m.index}, -1)">-</button>)
+                        const nobleSym = isNoble ? `<img src="/image_7f34d0.png" class="crown-icon" alt="Noble">` : "";
+                        const details = (m.affiliation || m.occupation) ? ` <span style="color:#aaa; font-size:0.85em;">[${m.affiliation || 'No Faction'} - ${m.occupation || 'Civilian'}]</span>` : "";
+                        
+                        let questBadge = "";
+                        if (m.main_quest === 1) questBadge = `<span class="badge badge-main">MAIN QUEST</span>`;
+                        else if (m.side_quest === 1) questBadge = `<span class="badge badge-side">SIDE QUEST</span>`;
+                        
+                        let dispControls = "";
+                        if (m.index !== -1) {
+                            dispControls = `<br>
+                            <span style="font-size:0.9em; color:#ccc;">
+                            Bar Disp: <strong id="disp_bar_${m.index}">${m.bar_disposition}</strong> 
+                            <button class="disp-btn plus" onclick="adjustDisp(${m.index}, 1, 'bar')">+</button>
+                            <button class="disp-btn minus" onclick="adjustDisp(${m.index}, -1, 'bar')">-</button>
+                            Party Disp: <strong id="disp_party_${m.index}">${m.party_disposition}</strong> 
+                            <button class="disp-btn plus" onclick="adjustDisp(${m.index}, 1, 'party')">+</button>
+                            <button class="disp-btn minus" onclick="adjustDisp(${m.index}, -1, 'party')">-</button>
+                            </span>`;
+                        }
+
+                        return `<div style="margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">
+                            ${nobleSym}<strong>${m.name}</strong> ${questBadge} ${details} ${dispControls}
                         </div>`;
                     }).join("");
                     
+                    let receiptItems = g.receipt.map(r => `<div>${r.quantity}x ${r.item_name} (${r.total_price.toFixed(2)} gp)</div>`).join("");
+                    if(!receiptItems) receiptItems = "<em>No items purchased.</em>";
+
                     npcGroupsHtml += `<tr>
-                        <td><strong>${g.location}</strong></td>
-                        <td>${g.size}</td>
-                        <td>${membersListHtml}</td>
-                        <td>${g.arrival}:00 - ${g.departure}:00 (${g.stay_duration} hrs)</td>
-                        <td class="income-text">+${g.group_spend.toFixed(2)} gp</td>
+                        <td style="vertical-align:top;"><strong>${g.location}</strong></td>
+                        <td style="vertical-align:top;">${g.size}</td>
+                        <td style="vertical-align:top;">${membersListHtml}</td>
+                        <td style="vertical-align:top;">${g.arrival}:00 - ${g.departure}:00 (${g.stay_duration} hrs)</td>
+                        <td style="vertical-align:top;" class="income-text">
+                            +${g.group_spend.toFixed(2)} gp
+                            <div class="receipt-box" style="color:#ddd; font-weight:normal;">${receiptItems}</div>
+                        </td>
                     </tr>`;
                 });
                 npcGroupsHtml += "</tbody></table>";
@@ -499,23 +453,53 @@
             let npcHourlyHtml = "";
             if (data.npc_hourly) {
                 for (let hour = 12; hour <= 23; hour++) {
-                    const present = data.npc_hourly[hour] || [];
-                    const presentText = present.length > 0 ? present.join(", ") : "<em>None</em>";
-                    npcHourlyHtml += `<tr><td>${hour}:00</td><td>${presentText}</td></tr>`;
+                    const hData = data.npc_hourly[hour];
+                    let cellHtml = "";
+                    let totalHourCount = 0;
+                    
+                    ['VIP', 'Table', 'Bar', 'Standing'].forEach(loc => {
+                        if(hData[loc] && hData[loc].length > 0) {
+                            totalHourCount += hData[loc].length;
+                            cellHtml += `<div style="margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #555;">
+                                <div style="color:#d7ba7d; font-weight:bold; margin-bottom:4px;">${loc} (${hData[loc].length} Patrons)</div>`;
+                            hData[loc].forEach(m => {
+                                const isNoble = m.lifestyle.toLowerCase().match(/aristocratic|wealthy|noble/);
+                                const nobleSym = isNoble ? `<img src="/image_7f34d0.png" class="crown-icon" alt="Noble">` : "";
+                                const details = (m.affiliation || m.occupation) ? ` <span style="color:#aaa; font-size:0.85em;">[${m.affiliation || 'No Faction'} - ${m.occupation || 'Civilian'}]</span>` : "";
+                                
+                                let questBadge = "";
+                                if (m.main_quest === 1) questBadge = `<span class="badge badge-main">MAIN QUEST</span>`;
+                                else if (m.side_quest === 1) questBadge = `<span class="badge badge-side">SIDE QUEST</span>`;
+
+                                cellHtml += `<div style="margin-left: 10px; font-size:0.9em; margin-bottom:3px;">${nobleSym}<strong>${m.name}</strong> ${questBadge} ${details}</div>`;
+                            });
+                            cellHtml += `</div>`;
+                        }
+                    });
+                    
+                    if (!cellHtml) cellHtml = "<div style='padding:10px;'><em>Empty</em></div>";
+                    
+                    npcHourlyHtml += `<tr class="hour-row" onclick="toggleHour('hour_${hour}')">
+                        <td colspan="2"><strong>▶ ${hour}:00</strong> <span style="color:#aaa; font-size: 0.9em; margin-left:15px;">(${totalHourCount} Present)</span></td>
+                    </tr>
+                    <tr id="hour_${hour}" class="details-row">
+                        <td style="width: 15%; border-right: none;"></td>
+                        <td style="border-left: none;">${cellHtml}</td>
+                    </tr>`;
                 }
             }
             document.getElementById('out-npc-hourly').innerHTML = npcHourlyHtml;
         }
 
-        async function adjustDisp(index, delta) {
+        async function adjustDisp(index, delta, type) {
             if(index < 0) return;
             const res = await fetch(`${API_URL}/npcs/disposition/adjust`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ index: index, delta: delta })
+                body: JSON.stringify({ index: index, delta: delta, disp_type: type })
             });
             if(res.ok) {
-                let el = document.getElementById(`disp_${index}`);
+                let el = document.getElementById(`disp_${type}_${index}`);
                 if(el) {
                     el.innerText = parseInt(el.innerText) + delta;
                 }
@@ -528,25 +512,9 @@
             const payload = { calendar_date: dateStr, sales: pendingAutoSales };
             const response = await fetch(`${API_URL}/save_day`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if(response.ok) {
-                alert(`Day ${dateStr} saved successfully!`);
+                alert(`Day ${dateStr} saved successfully! Inventory counts have been updated based on sales.`);
                 pendingAutoSales = [];
-                document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger.</em>";
-            }
-        }
-
-        async function submitManualSale() {
-            const dateStr = document.getElementById('global_date').value;
-            const payload = {
-                item_name: document.getElementById('sale_item').value,
-                quantity: parseInt(document.getElementById('sale_qty').value),
-                total_price: parseFloat(document.getElementById('sale_price').value),
-                sale_date: dateStr
-            };
-            const response = await fetch(`${API_URL}/sales`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if(response.ok) {
-                alert("Manual sale recorded.");
-                document.getElementById('sale_item').value = "";
-                document.getElementById('sale_price').value = "0.0";
+                document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger. Inventory stock updated.</em>";
             }
         }
 
@@ -558,15 +526,30 @@
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}"></td>
-                    <td><input class="editable-input" type="number" id="inv_hand_${item._id}" value="${item.stock_on_hand}"></td>
-                    <td><input class="editable-input" type="number" id="inv_order_${item._id}" value="${item.stock_on_order}"></td>
-                    <td><input class="editable-input" type="number" id="inv_per_${item._id}" value="${item.units_per}"></td>
-                    <td><input class="editable-input" type="number" id="inv_price_${item._id}" value="${item.unit_price}" step="0.1"></td>
-                    <td><button onclick="updateInventoryItem('${item._id}')">Save</button></td>
+                    <td><input class="editable-input" type="text" id="inv_name_${item._csv_index}" value="${item['Item Name']}"></td>
+                    <td><input class="editable-input" type="number" id="inv_hand_${item._csv_index}" value="${item['Stock on Hand']}"></td>
+                    <td><input class="editable-input" type="number" id="inv_order_${item._csv_index}" value="${item['Stock on Order']}"></td>
+                    <td><input class="editable-input" type="number" id="inv_per_${item._csv_index}" value="${item['Units Per']}"></td>
+                    <td><input class="editable-input" type="number" id="inv_price_${item._csv_index}" value="${item['Unit Price']}" step="0.1"></td>
+                    <td><button onclick="updateInventoryItem(${item._csv_index})">Save</button></td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        async function addInventory() {
+            const payload = {
+                item_name: document.getElementById('new_inv_name').value,
+                stock_on_hand: parseInt(document.getElementById('new_inv_hand').value || 0),
+                stock_on_order: parseInt(document.getElementById('new_inv_order').value || 0),
+                units_per: parseInt(document.getElementById('new_inv_per').value || 1),
+                unit_price: parseFloat(document.getElementById('new_inv_price').value || 0)
+            };
+            const res = await fetch(`${API_URL}/inventory`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if(res.ok) { 
+                document.getElementById('new_inv_name').value = "";
+                loadInventory(); 
+            }
         }
 
         async function updateInventoryItem(id) {
@@ -682,6 +665,8 @@
                     <td><input class="editable-input" type="text" id="npc_li_${idx}" value="${npc['Lifestyle'] || ''}"></td>
                     <td><input class="editable-input" type="number" id="npc_b_${idx}" value="${npc['Bar Disposition'] || '0'}"></td>
                     <td><input class="editable-input" type="number" id="npc_p_${idx}" value="${npc['Party Disposition'] || '0'}"></td>
+                    <td><input class="editable-input" type="number" id="npc_mq_${idx}" value="${npc['MAIN QUEST NPC'] || '0'}" min="0" max="1"></td>
+                    <td><input class="editable-input" type="number" id="npc_sq_${idx}" value="${npc['SIDE QUEST NPC'] || '0'}" min="0" max="1"></td>
                     <td><button onclick="updateNPC(${idx})">Save</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -696,7 +681,9 @@
                 occupation: document.getElementById('new_npc_occ').value,
                 lifestyle: document.getElementById('new_npc_life').value,
                 bar_disposition: parseInt(document.getElementById('new_npc_bar').value || 0),
-                party_disposition: parseInt(document.getElementById('new_npc_party').value || 0)
+                party_disposition: parseInt(document.getElementById('new_npc_party').value || 0),
+                main_quest: parseInt(document.getElementById('new_npc_mq').value || 0),
+                side_quest: parseInt(document.getElementById('new_npc_sq').value || 0)
             };
             const res = await fetch(`${API_URL}/npcs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if(res.ok) { 
@@ -714,7 +701,9 @@
                 occupation: document.getElementById(`npc_o_${idx}`).value,
                 lifestyle: document.getElementById(`npc_li_${idx}`).value,
                 bar_disposition: parseInt(document.getElementById(`npc_b_${idx}`).value || 0),
-                party_disposition: parseInt(document.getElementById(`npc_p_${idx}`).value || 0)
+                party_disposition: parseInt(document.getElementById(`npc_p_${idx}`).value || 0),
+                main_quest: parseInt(document.getElementById(`npc_mq_${idx}`).value || 0),
+                side_quest: parseInt(document.getElementById(`npc_sq_${idx}`).value || 0)
             };
             await fetch(`${API_URL}/npcs/${idx}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             alert("NPC updated.");
@@ -759,7 +748,26 @@
             const data = await response.json();
             let totalSales = 0, totalExpenses = 0, totalLedgerIncome = 0;
             
-            data.sales.forEach(s => totalSales += s.total_price);
+            let salesTableHtml = `
+            <h3 style="margin-top:30px;">Itemized Historical Sales Database</h3>
+            <div style="max-height: 400px; overflow-y: auto;">
+            <table style="width:100%;">
+                <thead>
+                    <tr><th>Date</th><th>Item</th><th>Qty</th><th>Total (gp)</th></tr>
+                </thead>
+                <tbody>`;
+            
+            data.sales.forEach(s => {
+                totalSales += s.total_price;
+                salesTableHtml += `<tr>
+                    <td>${s.sale_date}</td>
+                    <td>${s.item_name}</td>
+                    <td>${s.quantity}</td>
+                    <td class="income-text">+${s.total_price.toFixed(2)}</td>
+                </tr>`;
+            });
+            salesTableHtml += `</tbody></table></div>`;
+
             data.ledger.forEach(l => {
                 if(l.entry_type === "Income") totalLedgerIncome += l.amount;
                 else totalExpenses += l.amount;
@@ -767,11 +775,15 @@
             const net = (totalSales + totalLedgerIncome) - totalExpenses;
             
             document.getElementById('report-output').innerHTML = `
-                <h3>System Overview</h3>
-                <p><strong>Total Recorded Bar Sales:</strong> ${totalSales.toFixed(2)} gp</p>
-                <p><strong>Total Ledger Income (Grants/Sponsors):</strong> ${totalLedgerIncome.toFixed(2)} gp</p>
-                <p><strong>Total Recorded Expenses:</strong> ${totalExpenses.toFixed(2)} gp</p>
-                <p><strong>Net Vault Profit/Loss:</strong> <span style="color: ${net >= 0 ? '#28a745' : '#dc3545'}; font-size: 18px; font-weight: bold;">${net.toFixed(2)} gp</span></p>
+                <div style="background-color:#333; padding:20px; border-radius:4px; margin-bottom:20px;">
+                    <h3>System Net Overview</h3>
+                    <p><strong>Total Recorded Bar Sales (Inventory Moved):</strong> <span class="income-text">${totalSales.toFixed(2)} gp</span></p>
+                    <p><strong>Total Ledger Income (Grants/Sponsors):</strong> <span class="income-text">${totalLedgerIncome.toFixed(2)} gp</span></p>
+                    <p><strong>Total Recorded Ledger Expenses (Wages/Guilds):</strong> <span class="expense-text">-${totalExpenses.toFixed(2)} gp</span></p>
+                    <hr style="border-color:#555;">
+                    <p style="font-size:18px;"><strong>Net Vault Profit/Loss:</strong> <span style="color: ${net >= 0 ? '#28a745' : '#dc3545'}; font-weight: bold;">${net.toFixed(2)} gp</span></p>
+                </div>
+                ${salesTableHtml}
             `;
         }
 
