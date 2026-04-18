@@ -77,6 +77,67 @@ button:hover {
     background-color: #005f9e;
 }
 
+.disp-btn {
+    padding: 2px 6px;
+    margin-left: 2px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    border: none;
+}
+
+.disp-btn.plus { 
+    background-color: #28a745; 
+    color: white; 
+}
+
+.disp-btn.minus { 
+    background-color: #dc3545; 
+    color: white; 
+    margin-right: 10px;
+}
+
+.badge {
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    font-weight: bold;
+    margin-left: 5px;
+    display: inline-block;
+}
+
+.badge-main { 
+    background-color: #dc3545; 
+    color: white; 
+}
+
+.badge-side { 
+    background-color: #007acc; 
+    color: white; 
+}
+
+.hour-row { 
+    cursor: pointer; 
+    background-color: #333; 
+    transition: background 0.2s;
+}
+
+.hour-row:hover { 
+    background-color: #444; 
+}
+
+.details-row { 
+    display: none; 
+    background-color: #252526; 
+}
+
+.crown-icon { 
+    width: 16px; 
+    height: 16px; 
+    vertical-align: sub; 
+    margin-right: 4px; 
+}
+
 .tab-content {
     display: none;
     background-color: #252526;
@@ -121,6 +182,11 @@ th, td {
 
 th {
     background-color: #333;
+    cursor: pointer;
+}
+
+th:hover {
+    background-color: #444;
 }
 
 .faction-header:hover td {
@@ -180,4 +246,13 @@ th {
 .expense-text {
     color: #dc3545;
     font-weight: bold;
+}
+
+.receipt-box {
+    background: #111;
+    padding: 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    margin-top: 5px;
 }
