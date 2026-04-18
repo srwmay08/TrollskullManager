@@ -162,13 +162,13 @@ function renderInventory() {
                     <th rowspan="2" class="bg-cost" title="Calculated break-down cost">Cost<br>per Item</th>
                     <th rowspan="2" class="bg-stock">Base<br>Stock</th>
                     <th rowspan="2" class="bg-stock">Restock<br>Level</th>
-                    <th rowspan="2" class="bg-stock">Current<br>Stock</th>
+                    <th rowspan="2" class="bg-stock">Stock<br>on Hand</th>
                     <th rowspan="2" class="bg-revenue">Sale<br>Price (gp)</th>
                     <th rowspan="2" style="background-color: #333;">Action</th>
                 </tr>
                 <tr>
-                    <th class="bg-cost" style="width: 80px;">Unit</th>
-                    <th class="bg-cost" style="width: 80px;">Cost (gp)</th>
+                    <th class="bg-cost" style="width: 80px;">Order<br>Unit</th>
+                    <th class="bg-cost" style="width: 80px;">Order<br>Cost (gp)</th>
                 </tr>
             </thead>
     `;

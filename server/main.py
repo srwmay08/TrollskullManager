@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
                 reader = csv.DictReader(f)
                 for row in reader:
                     inv_list.append({
-                        "item_name": row.get("Item Name", row.get("item_name", "")),
+                        "item_name": row.get("Item Name", ""),
                         "category": row.get("Category", "Uncategorized"),
                         "order_unit": row.get("Order Unit", "Unit"),
                         "order_cost": parse_float(row.get("Order Cost", "0.0")),
@@ -39,18 +39,26 @@ async def lifespan(app: FastAPI):
                         "cost_per_item": parse_float(row.get("Cost per Item", "0.0")),
                         "base_stock": parse_int(row.get("Base Stock", "0")),
                         "restock_level": parse_int(row.get("Restock Level", "0")),
-                        "stock_on_hand": parse_int(row.get("Stock on Hand", row.get("stock_on_hand", "0"))),
-                        "unit_price": parse_float(row.get("Sale Price", row.get("unit_price", "0.0")))
+                        "stock_on_hand": parse_int(row.get("Stock on Hand", "0")),
+                        "unit_price": parse_float(row.get("Sale Price", "0.0"))
                     })
             if inv_list:
                 db.inventory.insert_many(inv_list)
         else:
             seed_items = [
                 {"item_name": "Moradin's Hammerfall", "category": "Dwarven Cask Selections", "order_unit": "Keg", "order_cost": 30.0, "qty_per_unit": 60, "cost_per_item": 0.5, "base_stock": 240, "restock_level": 40, "stock_on_hand": 120, "unit_price": 2.0},
+                {"item_name": "Ironbelly Stout", "category": "Dwarven Cask Selections", "order_unit": "Keg", "order_cost": 25.0, "qty_per_unit": 50, "cost_per_item": 0.5, "base_stock": 150, "restock_level": 50, "stock_on_hand": 100, "unit_price": 1.8},
+                {"item_name": "Deepforge Dark Ale", "category": "Dwarven Cask Selections", "order_unit": "Keg", "order_cost": 28.0, "qty_per_unit": 60, "cost_per_item": 0.46, "base_stock": 180, "restock_level": 60, "stock_on_hand": 180, "unit_price": 1.5},
                 {"item_name": "First Frost Art Wine", "category": "High End Art Wines", "order_unit": "Case", "order_cost": 60.0, "qty_per_unit": 6, "cost_per_item": 10.0, "base_stock": 24, "restock_level": 6, "stock_on_hand": 10, "unit_price": 25.0},
+                {"item_name": "Sembian Sweet Wine", "category": "High End Art Wines", "order_unit": "Case", "order_cost": 45.0, "qty_per_unit": 6, "cost_per_item": 7.5, "base_stock": 18, "restock_level": 6, "stock_on_hand": 12, "unit_price": 18.0},
+                {"item_name": "Elverquisst", "category": "High End Art Wines", "order_unit": "Bottle", "order_cost": 100.0, "qty_per_unit": 1, "cost_per_item": 100.0, "base_stock": 5, "restock_level": 1, "stock_on_hand": 3, "unit_price": 250.0},
                 {"item_name": "Feywild Absinthe", "category": "Specialty Liquors and Imported Spirits", "order_unit": "Crate", "order_cost": 50.0, "qty_per_unit": 10, "cost_per_item": 5.0, "base_stock": 20, "restock_level": 5, "stock_on_hand": 15, "unit_price": 12.0},
+                {"item_name": "Tears of Sylune", "category": "Specialty Liquors and Imported Spirits", "order_unit": "Case", "order_cost": 80.0, "qty_per_unit": 12, "cost_per_item": 6.66, "base_stock": 24, "restock_level": 12, "stock_on_hand": 24, "unit_price": 15.0},
+                {"item_name": "Dragon's Breath Whiskey", "category": "Specialty Liquors and Imported Spirits", "order_unit": "Crate", "order_cost": 40.0, "qty_per_unit": 10, "cost_per_item": 4.0, "base_stock": 30, "restock_level": 10, "stock_on_hand": 28, "unit_price": 8.0},
                 {"item_name": "Black Wyvern Porter", "category": "Beers, Ales, Ciders & Soft Drinks", "order_unit": "Large Keg", "order_cost": 4.0, "qty_per_unit": 100, "cost_per_item": 0.04, "base_stock": 300, "restock_level": 50, "stock_on_hand": 200, "unit_price": 0.2},
-                {"item_name": "Gumpfish Stew", "category": "Food & Provisions", "order_unit": "Pot", "order_cost": 2.0, "qty_per_unit": 20, "cost_per_item": 0.1, "base_stock": 60, "restock_level": 10, "stock_on_hand": 30, "unit_price": 0.3}
+                {"item_name": "Shadowdark Ale", "category": "Beers, Ales, Ciders & Soft Drinks", "order_unit": "Keg", "order_cost": 3.0, "qty_per_unit": 60, "cost_per_item": 0.05, "base_stock": 180, "restock_level": 60, "stock_on_hand": 120, "unit_price": 0.1},
+                {"item_name": "Waterdeep Cider", "category": "Beers, Ales, Ciders & Soft Drinks", "order_unit": "Barrel", "order_cost": 2.5, "qty_per_unit": 80, "cost_per_item": 0.03, "base_stock": 160, "restock_level": 80, "stock_on_hand": 150, "unit_price": 0.08},
+                {"item_name": "Trollskull Pale Ale", "category": "Beers, Ales, Ciders & Soft Drinks", "order_unit": "Large Keg", "order_cost": 5.0, "qty_per_unit": 100, "cost_per_item": 0.05, "base_stock": 400, "restock_level": 100, "stock_on_hand": 350, "unit_price": 0.15}
             ]
             db.inventory.insert_many(seed_items)
             

@@ -1,7 +1,27 @@
-item_name,stock_on_hand,stock_on_order,units_per,unit_price
-Moradin's Hammerfall (Heavy Pour),60,0,1,2.0
-First Frost Art Wine (Bottle),10,5,5,25.0
-Azun's Lament (Bottle),12,0,5,15.0
-Black Wyvern Porter (Tankard),200,100,1,0.04
-The 'Lif' Special (Glass),50,0,1,0.8
-Gumpfish Stew (Bowl),30,0,1,0.3
+,ORDER BY,,,ITEMS / UNIT DETAILS,,COST PER ITEM,SELL PRICE IN COPPER,MARGIN IN COPPER,STOCK UNIT QUANTITY,REORDER LEVEL,STATUS,REORDER QUANTITY
+CATEGORY / ITEM,UNIT,QUANTITY,UNIT COST IN COPPER,QUANTITY per UNIT,SERVE SIZE,,,,,,,
+DWARVEN CASK SELECTIONS,,,,,,,,,,,,
+Moradin-Anaz,Cask,1,20000,60,Heavy Pour,333.3333333,400,66.66666667,4,1,OK,4
+Ironforge Reserve,Cask,1,4600,80,Standard,57.5,80,22.5,4,2,OK,4
+Stone-Hearth Malt,Cask,1,2200,80,Standard,27.5,50,22.5,4,2,OK,4
+HIGH-END ART WINES,,,,,,,,,,,,
+First Frost,Case,12,2600,5,Glass,43.33333333,60,16.66666667,3,1,OK,3
+Azun’s Lament,Case,12,1500,5,Glass,25,40,15,3,1,OK,3
+Silver Spring,Case,12,1200,5,Glass,20,40,20,3,1,OK,3
+Manycherries Bold,Case,12,500,5,Goblet,8.333333333,20,11.66666667,3,1,OK,3
+Harbor White,Case,12,400,5,Glass,6.666666667,20,13.33333333,3,1,OK,3
+Pulass,Case,12,500,5,Pour,8.333333333,20,11.66666667,3,1,OK,3
+SPECIALTY LIQUORS,,,,,,,,,,,,
+Best Old Mintarn,Bottle,4,2400,20,Glass,30,60,30,3,1,OK,3
+Wyvern Whiskey,Bottle,4,1900,20,Glass,23.75,50,26.25,3,1,OK,3
+Amberjack Whiskey,Bottle,6,1700,20,Glass,14.16666667,40,25.83333333,2,1,OK,2
+Waterdhavian Zzar,Bottle,1,600,20,Glass,30,40,10,12,1,OK,12
+Lt. Talbot’s Moonshine,Jug,8,800,30,Drink,3.333333333,20,16.66666667,2,1,OK,2
+Shadowdale Brandy,Bottle,6,1300,20,Glass,10.83333333,20,9.166666667,2,1,OK,2
+Neverwinter Black Icewine,Bottle,12,1200,15,Glass,6.666666667,30,23.33333333,3,1,OK,3
+"BEERS, ALES & CIDERS",,,,,,,,,,,,
+"The ""Lif"" Special",Keg,1,300,100,Glass,3,5,2,2,0,OK,2
+Aftermath Abbey Ale,Keg,1,320,100,Tankard,3.2,5,1.8,2,0,OK,2
+Hell’s Teeth Cider,Keg,1,500,100,Tankard,5,7,2,2,0,OK,2
+Black Wyvern Porter,Keg,1,485,100,Tankard,4.85,7,2.15,2,0,OK,2
+Goat’s Head Ale,Keg,1,505,100,Tankard,5.05,7,1.95,2,0,OK,2
