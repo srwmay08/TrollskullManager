@@ -25,7 +25,9 @@ class RollRequest(BaseModel):
 
 class SaleItem(BaseModel):
     item_name: str
+    original_item_name: str
     quantity: int
+    stock_deduction: int
     total_price: float
     sale_date: str
 

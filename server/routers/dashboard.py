@@ -147,22 +147,47 @@ def simulate_tavern_day(request: RollRequest):
                 if affordable_items:
                     chosen_item = random.choice(affordable_items)
                     qty = 1
-                    if chosen_item["stock_unit_quantity"] >= qty:
-                        chosen_item["stock_unit_quantity"] -= qty
+                    
+                    price_in_gp = (chosen_item.get("sell_price_copper", 0) / 100.0)
+                    cost_in_gp = (chosen_item.get("cost_per_item_copper", 0) / 100.0)
+                    qty_per_unit = chosen_item.get("qty_per_unit", 1)
+                    
+                    is_whole_unit = False
+                    if lifestyle in ["Aristocratic", "Wealthy"] and random.random() < 0.3:
+                        is_whole_unit = True
+                    elif lifestyle == "Comfortable" and random.random() < 0.1:
+                        is_whole_unit = True
+
+                    if is_whole_unit and qty_per_unit > 1 and chosen_item["stock_unit_quantity"] >= qty_per_unit:
+                        stock_deduction = qty_per_unit
+                        order_unit_name = chosen_item.get("order_unit", "Unit")
+                        item_label = f"{chosen_item['item_name']} (Whole {order_unit_name})"
+                        price_in_gp = price_in_gp * qty_per_unit
+                        cost_in_gp = cost_in_gp * qty_per_unit
+                    else:
+                        stock_deduction = 1
+                        item_label = chosen_item["item_name"]
                         
-                        price_in_gp = (chosen_item.get("sell_price_copper", 0) / 100.0)
-                        cost_in_gp = (chosen_item.get("cost_per_item_copper", 0) / 100.0)
+                    if chosen_item["stock_unit_quantity"] >= stock_deduction:
+                        chosen_item["stock_unit_quantity"] -= stock_deduction
                         
-                        receipt_items.append({"name": chosen_item["item_name"], "qty": qty, "price": price_in_gp * qty})
+                        receipt_items.append({"name": item_label, "qty": qty, "price": price_in_gp * qty})
                         receipt_total += (price_in_gp * qty)
                         
                         total_gross_sales += (price_in_gp * qty)
                         total_cost_of_goods += (cost_in_gp * qty)
                         
-                        if chosen_item["item_name"] not in consolidated_sales:
-                            consolidated_sales[chosen_item["item_name"]] = {"qty": 0, "total": 0.0, "id": str(chosen_item["_id"])}
-                        consolidated_sales[chosen_item["item_name"]]["qty"] += qty
-                        consolidated_sales[chosen_item["item_name"]]["total"] += (price_in_gp * qty)
+                        if item_label not in consolidated_sales:
+                            consolidated_sales[item_label] = {
+                                "qty": 0, 
+                                "total": 0.0, 
+                                "id": str(chosen_item["_id"]),
+                                "original_item_name": chosen_item["item_name"],
+                                "stock_deduction": 0
+                            }
+                        consolidated_sales[item_label]["qty"] += qty
+                        consolidated_sales[item_label]["total"] += (price_in_gp * qty)
+                        consolidated_sales[item_label]["stock_deduction"] += stock_deduction
                         
                         affordable_items = [i for i in affordable_items if i["stock_unit_quantity"] > 0]
 
@@ -178,8 +203,15 @@ def simulate_tavern_day(request: RollRequest):
         hourly_feedback[hr_label] = [p["name"] for p in active_patrons]
 
     final_auto_sales = []
-    for item_name, data in consolidated_sales.items():
-        final_auto_sales.append({"item_name": item_name, "quantity": data["qty"], "total_price": data["total"], "inv_id": data["id"]})
+    for item_label, data in consolidated_sales.items():
+        final_auto_sales.append({
+            "item_name": item_label, 
+            "original_item_name": data["original_item_name"],
+            "quantity": data["qty"], 
+            "stock_deduction": data["stock_deduction"],
+            "total_price": data["total"], 
+            "inv_id": data["id"]
+        })
 
     total_profit = total_gross_sales - total_cost_of_goods
 
@@ -206,9 +238,9 @@ def save_day_data(request: SaveDayRequest):
     for sale in request.sales:
         total_income += sale.total_price
         db.sales.insert_one(sale.dict())
-        inv_item = db.inventory.find_one({"item_name": sale.item_name})
+        inv_item = db.inventory.find_one({"item_name": sale.original_item_name})
         if inv_item:
-            new_stock = max(0, inv_item["stock_unit_quantity"] - sale.quantity)
+            new_stock = max(0, inv_item["stock_unit_quantity"] - sale.stock_deduction)
             db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_unit_quantity": new_stock}})
 
     if total_income > 0:

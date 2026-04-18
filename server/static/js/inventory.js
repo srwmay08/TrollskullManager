@@ -50,10 +50,17 @@ function renderInventoryTable() {
     `;
 
     for (let cat in groups) {
-        html += `<tbody><tr><td colspan="15" style="background-color: #444; text-align: left; padding: 8px; font-weight: bold;">▼ ${cat.toUpperCase()}</td></tr>`;
+        const safeCat = cat.replace(/\s+/g, '-');
+        html += `<tbody class="cat-group">`;
+        html += `<tr class="cat-header" onclick="toggleCategory('${safeCat}')" style="cursor: pointer; user-select: none;">
+                    <td colspan="15" style="background-color: #444; text-align: left; padding: 8px; font-weight: bold;">
+                        <span id="icon_${safeCat}">▼</span> ${cat.toUpperCase()}
+                    </td>
+                 </tr>`;
+        
         groups[cat].forEach(item => {
             const statusColor = (item.status === 'ORDER' || item.status === 'Order') ? '#ff4d4d' : '#4dff4d';
-            html += `<tr id="inv_${item._id}">
+            html += `<tr id="inv_${item._id}" class="cat-row-${safeCat}">
                 <td contenteditable="true" class="inv-cat" style="text-align: left; padding-left: 5px;">${item.category}</td>
                 <td contenteditable="true" class="inv-name" style="text-align: left; padding-left: 5px;">${item.item_name}</td>
                 <td contenteditable="true" class="inv-unit" style="background-color: rgba(90, 50, 50, 0.2);">${item.order_unit}</td>
@@ -75,6 +82,24 @@ function renderInventoryTable() {
     }
     html += `</table>`;
     document.getElementById('inventory-container').innerHTML = html;
+}
+
+function toggleCategory(safeCat) {
+    const rows = document.querySelectorAll(`.cat-row-${safeCat}`);
+    const icon = document.getElementById(`icon_${safeCat}`);
+    let isHidden = false;
+    
+    if (rows.length > 0) {
+        isHidden = rows[0].style.display === 'none';
+    }
+
+    rows.forEach(row => {
+        row.style.display = isHidden ? '' : 'none';
+    });
+
+    if (icon) {
+        icon.innerText = isHidden ? '▼' : '▶';
+    }
 }
 
 async function saveInventory(id) {
