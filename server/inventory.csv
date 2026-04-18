@@ -1,22 +1,33 @@
-Item Name,Stock on Hand,Stock on Order,Units Per,Unit Price
-"Moradin-Anaz (""Moradin's Hammerfall"")",60,0,1,2.0
-Ironforge Reserve,60,0,1,1.0
-Stone-Hearth Malt,60,0,1,0.5
-First Frost,50,0,5,5.0
-Azun's Lament,50,0,5,3.0
-Silver Spring,50,0,5,2.0
-Manycherries Bold,50,0,5,1.0
-Harbor White,50,0,5,0.8
-Pulass,50,0,5,1.0
-Best Old Mintarn Whisky,50,0,1,1.0
-Wyvern Whiskey,50,0,1,0.8
-Amberjack Whiskey,50,0,1,0.6
-Waterdhavian Zzar,50,0,1,0.5
-Lieutenant Talbot's Moonshine,50,0,1,0.4
-Shadowdale Brandy,50,0,1,1.0
-Neverwinter Black Icewine,50,0,1,2.0
-"The ""Lif"" Special",100,0,1,0.8
-Aftermath Abbey Ale,100,0,1,0.1
-Hell's Teeth Cider,100,0,1,0.05
-Black Wyvern Porter,100,0,1,0.04
-Goat's Head Ale,100,0,1,0.03
+,,ORDER BY,,,COST PER ITEM,ITEMS / UNIT DETAILS,,SELL PRICE IN COPPER,MARGIN IN COPPER,STOCK UNIT QUANTITY,REORDER LEVEL,STATUS,REORDER QUANTITY
+CATEGORY,ITEM,UNIT,QUANTITY,UNIT COST IN COPPER,,QUANTITY per UNIT,SERVE SIZE,,,,,,
+,,,,,,,,,,,,,
+DWARVEN CASK SELECTIONS,Moradin-Anaz,Cask,1,20000,333.3333333,60,Heavy Pour,400,66.66666667,4,1,OK,4
+DWARVEN CASK SELECTIONS,Ironforge Reserve,Cask,1,4600,57.5,80,Standard,80,22.5,4,2,OK,4
+DWARVEN CASK SELECTIONS,Stone-Hearth Malt,Cask,1,2200,27.5,80,Standard,50,22.5,4,2,OK,4
+,,,,,,,,,,,,,
+HIGH-END ART WINES,First Frost,Case,12,2600,216.6666667,1,Bottle,240,23.33333333,3,1,OK,3
+HIGH-END ART WINES,First Frost,Case,12,2600,43.33333333,5,Glasses,60,16.66666667,,,,
+HIGH-END ART WINES,Azun’s Lament,Case,12,1500,125,1,Bottle,150,25,3,1,OK,3
+HIGH-END ART WINES,Azun’s Lament,Case,12,1500,25,5,Glasses,40,15,,,,
+HIGH-END ART WINES,Silver Spring,Case,12,1200,100,1,Bottle,120,20,3,1,OK,3
+HIGH-END ART WINES,Silver Spring,Case,12,1200,20,5,Glasses,40,20,,,,
+HIGH-END ART WINES,Manycherries Bold,Case,12,500,41.66666667,1,Bottle,100,58.33333333,3,1,OK,3
+HIGH-END ART WINES,Manycherries Bold,Case,12,500,8.333333333,5,Glasses,30,21.66666667,,,,
+HIGH-END ART WINES,Harbor White,Case,12,400,33.33333333,1,Bottle,70,36.66666667,3,1,OK,3
+HIGH-END ART WINES,Harbor White,Case,12,400,6.666666667,5,Glasses,20,13.33333333,,,,
+HIGH-END ART WINES,Pulass,Case,12,500,41.66666667,1,Bottle,100,58.33333333,3,1,OK,3
+HIGH-END ART WINES,Pulass,Case,12,500,8.333333333,5,Glasses,30,21.66666667,,,,
+,,,,,,,,,,,,,
+SPECIALTY LIQUORS,Best Old Mintarn,Bottle,4,2400,30,20,Glass,60,30,3,1,OK,3
+SPECIALTY LIQUORS,Wyvern Whiskey,Bottle,4,1900,23.75,20,Glass,50,26.25,3,1,OK,3
+SPECIALTY LIQUORS,Amberjack Whiskey,Bottle,6,1700,14.16666667,20,Glass,40,25.83333333,2,1,OK,2
+SPECIALTY LIQUORS,Waterdhavian Zzar,Bottle,1,600,30,20,Glass,40,10,12,1,OK,12
+SPECIALTY LIQUORS,Lt. Talbot’s Moonshine,Jug,8,800,3.333333333,30,Drink,20,16.66666667,2,1,OK,2
+SPECIALTY LIQUORS,Shadowdale Brandy,Bottle,6,1300,10.83333333,20,Glass,20,9.166666667,2,1,OK,2
+SPECIALTY LIQUORS,Neverwinter Black Icewine,Bottle,12,1200,6.666666667,15,Glass,30,23.33333333,3,1,OK,3
+,,,,,,,,,,,,,
+"BEERS, ALES & CIDERS","The ""Lif"" Special",Keg,1,300,3,100,Glass,5,2,2,0,OK,2
+"BEERS, ALES & CIDERS",Aftermath Abbey Ale,Keg,1,320,3.2,100,Tankard,5,1.8,2,0,OK,2
+"BEERS, ALES & CIDERS",Hell’s Teeth Cider,Keg,1,500,5,100,Tankard,7,2,2,0,OK,2
+"BEERS, ALES & CIDERS",Black Wyvern Porter,Keg,1,485,4.85,100,Tankard,7,2.15,2,0,OK,2
+"BEERS, ALES & CIDERS",Goat’s Head Ale,Keg,1,505,5.05,100,Tankard,7,1.95,2,0,OK,2
