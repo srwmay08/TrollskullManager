@@ -103,7 +103,6 @@ async function rollOutcome() {
     });
     
     const data = await response.json();
-    
     document.getElementById('outcome-result').style.display = 'block';
     
     pendingAutoSales = data.auto_sales;
@@ -136,10 +135,7 @@ async function rollOutcome() {
                 </div>
             `;
         });
-        receiptsHtml += `
-                <div class="receipt-total">Total: ${r.total.toFixed(2)} gp</div>
-            </div>
-        `;
+        receiptsHtml += `<div class="receipt-total">Total: ${r.total.toFixed(2)} gp</div></div>`;
     });
     document.getElementById('out-receipts').innerHTML = receiptsHtml;
 }
@@ -158,11 +154,28 @@ async function saveDay() {
     });
 
     if(response.ok) {
-        alert(`Day ${dateStr} saved! Inventory deducted and CSVs synced.`);
+        const data = await response.json();
+        let message = `Day ${dateStr} saved! Inventory deducted and CSVs synced.`;
+        
+        if (data.restocks && data.restocks.length > 0) {
+            message += `\n\nAUTOMATIC RESTOCK TRIGGERED:\n`;
+            data.restocks.forEach(msg => {
+                message += `- ${msg}\n`;
+            });
+        }
+        
+        alert(message);
         pendingAutoSales = [];
         document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger. Inventory deducted.</em>";
         document.getElementById('out-receipts').innerHTML = "";
     }
+}
+
+function calcCost(id) {
+    const orderCost = parseFloat(document.getElementById(`inv_order_${id}`).value) || 0;
+    const qtyPer = parseInt(document.getElementById(`inv_qty_per_${id}`).value) || 1;
+    const costPer = orderCost / qtyPer;
+    document.getElementById(`inv_cost_per_${id}`).innerText = costPer.toFixed(2);
 }
 
 async function loadInventory() {
@@ -174,12 +187,16 @@ async function loadInventory() {
     data.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}"></td>
-            <td><input class="editable-input" type="number" id="inv_hand_${item._id}" value="${item.stock_on_hand}"></td>
-            <td><input class="editable-input" type="number" id="inv_order_${item._id}" value="${item.stock_on_order}"></td>
-            <td><input class="editable-input" type="number" id="inv_per_${item._id}" value="${item.units_per}"></td>
-            <td><input class="editable-input" type="number" id="inv_price_${item._id}" value="${item.unit_price}" step="0.1"></td>
-            <td><button onclick="updateInventoryItem('${item._id}')">Save & Sync CSV</button></td>
+            <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}" style="width: 150px;"></td>
+            <td><input class="editable-input small-input" type="number" id="inv_hand_${item._id}" value="${item.stock_on_hand}"></td>
+            <td><input class="editable-input" type="text" id="inv_size_${item._id}" value="${item.size_per_unit || 'Unit'}" style="width: 80px;"></td>
+            <td><input class="editable-input small-input" type="number" id="inv_qty_per_${item._id}" value="${item.qty_per_unit || 1}" oninput="calcCost('${item._id}')"></td>
+            <td><input class="editable-input small-input" type="number" id="inv_order_${item._id}" value="${item.order_cost || 0}" step="0.1" oninput="calcCost('${item._id}')"></td>
+            <td><span id="inv_cost_per_${item._id}" style="color:#d7ba7d;">${(item.cost_per_item || 0).toFixed(2)}</span></td>
+            <td><input class="editable-input small-input" type="number" id="inv_base_${item._id}" value="${item.base_stock || 0}"></td>
+            <td><input class="editable-input small-input" type="number" id="inv_restock_${item._id}" value="${item.restock_level || 0}"></td>
+            <td><input class="editable-input small-input" type="number" id="inv_price_${item._id}" value="${item.unit_price || 0}" step="0.1"></td>
+            <td><button onclick="updateInventoryItem('${item._id}')">Save</button></td>
         `;
         tbody.appendChild(tr);
     });
@@ -189,8 +206,12 @@ async function updateInventoryItem(id) {
     const payload = {
         item_name: document.getElementById(`inv_name_${id}`).value,
         stock_on_hand: parseInt(document.getElementById(`inv_hand_${id}`).value),
-        stock_on_order: parseInt(document.getElementById(`inv_order_${id}`).value),
-        units_per: parseInt(document.getElementById(`inv_per_${id}`).value),
+        size_per_unit: document.getElementById(`inv_size_${id}`).value,
+        qty_per_unit: parseInt(document.getElementById(`inv_qty_per_${id}`).value),
+        order_cost: parseFloat(document.getElementById(`inv_order_${id}`).value),
+        cost_per_item: parseFloat(document.getElementById(`inv_cost_per_${id}`).innerText),
+        base_stock: parseInt(document.getElementById(`inv_base_${id}`).value),
+        restock_level: parseInt(document.getElementById(`inv_restock_${id}`).value),
         unit_price: parseFloat(document.getElementById(`inv_price_${id}`).value)
     };
     await fetch(`${API_URL}/inventory/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -259,7 +280,7 @@ async function loadReports() {
     document.getElementById('report-output').innerHTML = `
         <h3>System Overview</h3>
         <p><strong>Total Recorded Bar Sales:</strong> ${totalSales.toFixed(2)} gp</p>
-        <p><strong>Total Ledger Income (Grants):</strong> ${totalLedgerIncome.toFixed(2)} gp</p>
+        <p><strong>Total Ledger Income:</strong> ${totalLedgerIncome.toFixed(2)} gp</p>
         <p><strong>Total Recorded Expenses:</strong> ${totalExpenses.toFixed(2)} gp</p>
         <p><strong>Net Vault Profit/Loss:</strong> <span style="color: ${net >= 0 ? '#28a745' : '#dc3545'}; font-size: 18px; font-weight: bold;">${net.toFixed(2)} gp</span></p>
     `;
@@ -367,19 +388,11 @@ async function updateNpcItem(id) {
         story_connection: document.getElementById(`npc_story_${id}`).value,
         pc_affiliation: document.getElementById(`npc_pc_${id}`).value
     };
-
-    const response = await fetch(`${API_URL}/npcs/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if(response.ok) {
-        alert("NPC Updated and npcs.csv Synced!");
-        const idx = npcData.findIndex(n => n._id === id);
-        if (idx > -1) { npcData[idx] = { ...npcData[idx], ...payload, _id: id }; }
-        renderNpcs();
-    }
+    await fetch(`${API_URL}/npcs/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    alert("NPC Updated and npcs.csv Synced!");
+    const idx = npcData.findIndex(n => n._id === id);
+    if (idx > -1) { npcData[idx] = { ...npcData[idx], ...payload, _id: id }; }
+    renderNpcs();
 }
 
 window.onload = function() {

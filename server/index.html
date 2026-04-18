@@ -39,6 +39,9 @@
             overflow-y: auto;
             padding-right: 10px;
         }
+        .editable-input.small-input {
+            width: 65px;
+        }
     </style>
 </head>
 <body>
@@ -49,7 +52,7 @@
             <label style="margin:0; font-weight:bold;">Current Date:</label>
             <span id="global_date_display" style="color: #d7ba7d; font-size: 16px; min-width: 180px; display:inline-block;"></span>
             <button class="save-btn" style="background-color: #007acc;" onclick="advanceDate()">Advance Day</button>
-            <button class="save-btn" onclick="saveDay()">Save Day to Ledger & Deduct Inventory</button>
+            <button class="save-btn" onclick="saveDay()">Save Day to Ledger & Deduct/Restock Inventory</button>
         </div>
     </div>
 
@@ -106,22 +109,28 @@
 
     <div id="inventory" class="tab-content">
         <h2>Inventory Management (Auto-Syncs with inventory.csv)</h2>
-        <p>Edit fields directly and click save on the row to update. Changes reflect instantly in both the database and the CSV file.</p>
+        <p>Edit fields directly and click save on the row to update. <strong>Cost per Item</strong> is auto-calculated from Order Cost ÷ Qty per Unit.</p>
         <button onclick="loadInventory()">Refresh Inventory List</button>
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Stock on Hand</th>
-                    <th>Stock on Order</th>
-                    <th>Units Per</th>
-                    <th>Unit Price (gp)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="inventory-table-body">
-            </tbody>
-        </table>
+        <div style="overflow-x: auto; margin-top: 15px;">
+            <table style="font-size: 13px; min-width: 1200px;">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th title="Current individual items in stock">Stock<br>On Hand</th>
+                        <th title="E.g., Keg, Case, Bottle">Size<br>per Unit</th>
+                        <th title="Amount of items inside the Ordered Unit">Qty<br>per Unit</th>
+                        <th title="Total cost to purchase the Size Unit">Order<br>Cost (gp)</th>
+                        <th title="Calculated break-down cost">Cost<br>per Item</th>
+                        <th title="Target maximum stock capacity">Base<br>Stock</th>
+                        <th title="Threshold to trigger auto-reorder">Restock<br>Level</th>
+                        <th title="Customer menu price">Sale<br>Price (gp)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-table-body">
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div id="staff" class="tab-content">

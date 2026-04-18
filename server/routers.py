@@ -1,5 +1,6 @@
 import random
 import csv
+import math
 from fastapi import APIRouter
 from bson.objectid import ObjectId
 
@@ -21,12 +22,22 @@ router = APIRouter()
 def sync_inventory_to_csv():
     items = list(db.inventory.find({}, {"_id": 0}))
     if not items: return
-    keys = ["item_name", "stock_on_hand", "stock_on_order", "units_per", "unit_price"]
+    keys = ["Item Name", "Stock on Hand", "Size per Unit", "Qty per Unit", "Order Cost", "Cost per Item", "Base Stock", "Restock Level", "Sale Price"]
     with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
         for item in items:
-            writer.writerow(item)
+            writer.writerow({
+                "Item Name": item.get("item_name", ""),
+                "Stock on Hand": item.get("stock_on_hand", 0),
+                "Size per Unit": item.get("size_per_unit", ""),
+                "Qty per Unit": item.get("qty_per_unit", 1),
+                "Order Cost": item.get("order_cost", 0.0),
+                "Cost per Item": item.get("cost_per_item", 0.0),
+                "Base Stock": item.get("base_stock", 0),
+                "Restock Level": item.get("restock_level", 0),
+                "Sale Price": item.get("unit_price", 0.0)
+            })
 
 def sync_npcs_to_csv():
     items = list(db.npcs.find({}, {"_id": 0}))
@@ -97,7 +108,6 @@ def simulate_tavern_day(request: RollRequest):
         
     daily_visitors = [random.choice(valid_npcs) for _ in range(total_expected_patrons)]
 
-    # Load Inventory State for Simulation
     inventory_db = list(db.inventory.find({"stock_on_hand": {"$gt": 0}}))
     inventory_state = {str(item["_id"]): item for item in inventory_db}
 
@@ -142,12 +152,8 @@ def simulate_tavern_day(request: RollRequest):
                 seated_at = "Standing"
             
             if seated_at != "Bounced":
-                active_patrons.append({
-                    "seat": seated_at,
-                    "departure_idx": current_hour_idx + duration
-                })
+                active_patrons.append({"seat": seated_at, "departure_idx": current_hour_idx + duration})
                 
-                # Generate Receipt based on Lifestyle and Inventory
                 available_items = [item for item in inventory_state.values() if item["stock_on_hand"] > 0]
                 affordable_items = []
                 
@@ -157,10 +163,9 @@ def simulate_tavern_day(request: RollRequest):
                     affordable_items = [i for i in available_items if 0.1 <= i["unit_price"] <= 2.0]
                 elif lifestyle == "Comfortable":
                     affordable_items = [i for i in available_items if 1.0 <= i["unit_price"] <= 10.0]
-                else: # Wealthy / Aristocratic
+                else: 
                     affordable_items = [i for i in available_items if i["unit_price"] >= 5.0]
 
-                # Fallback if specific tier is empty but they want something
                 if not affordable_items and available_items:
                     affordable_items = available_items
 
@@ -175,21 +180,14 @@ def simulate_tavern_day(request: RollRequest):
                         
                         if chosen_item["stock_on_hand"] >= qty:
                             chosen_item["stock_on_hand"] -= qty
-                            
-                            receipt_items.append({
-                                "name": chosen_item["item_name"],
-                                "qty": qty,
-                                "price": chosen_item["unit_price"] * qty
-                            })
+                            receipt_items.append({"name": chosen_item["item_name"], "qty": qty, "price": chosen_item["unit_price"] * qty})
                             receipt_total += (chosen_item["unit_price"] * qty)
                             
-                            # Track for final save
                             if chosen_item["item_name"] not in consolidated_sales:
                                 consolidated_sales[chosen_item["item_name"]] = {"qty": 0, "total": 0.0, "id": str(chosen_item["_id"])}
                             consolidated_sales[chosen_item["item_name"]]["qty"] += qty
                             consolidated_sales[chosen_item["item_name"]]["total"] += (chosen_item["unit_price"] * qty)
                             
-                            # Refresh affordable items in case stock hit 0
                             affordable_items = [i for i in affordable_items if i["stock_on_hand"] > 0]
 
                 if receipt_items:
@@ -203,31 +201,21 @@ def simulate_tavern_day(request: RollRequest):
                         "total": receipt_total
                     })
 
-    # Prepare final sales list
     final_auto_sales = []
     for item_name, data in consolidated_sales.items():
-        final_auto_sales.append({
-            "item_name": item_name,
-            "quantity": data["qty"],
-            "total_price": data["total"],
-            "inv_id": data["id"]
-        })
+        final_auto_sales.append({"item_name": item_name, "quantity": data["qty"], "total_price": data["total"], "inv_id": data["id"]})
 
-    return {
-        "total_roll": total_roll,
-        "auto_sales": final_auto_sales,
-        "receipts": customer_receipts
-    }
+    return {"total_roll": total_roll, "auto_sales": final_auto_sales, "receipts": customer_receipts}
 
 @router.post("/api/save_day")
 def save_day_data(request: SaveDayRequest):
     date_str = request.calendar_date
+    
+    # 1. Deduct Inventory from Sales
     for sale in request.sales:
-        sale.sale_date = date_str
         sale_dict = sale.dict()
         db.sales.insert_one(sale_dict)
         
-        # Deduct from actual DB inventory
         inv_item = db.inventory.find_one({"item_name": sale.item_name})
         if inv_item:
             new_stock = max(0, inv_item["stock_on_hand"] - sale.quantity)
@@ -237,24 +225,49 @@ def save_day_data(request: SaveDayRequest):
             row = [sale.sale_date, sale.item_name, sale.quantity, sale.total_price]
             sales_sheet.append_row(row)
 
+    restock_messages = []
+
+    # 2. Automated Reordering Protocol
+    all_inventory = list(db.inventory.find())
+    for inv in all_inventory:
+        current_stock = inv.get("stock_on_hand", 0)
+        restock_lvl = inv.get("restock_level", 0)
+        base_stock = inv.get("base_stock", 0)
+        
+        if current_stock <= restock_lvl and base_stock > current_stock:
+            qty_per_unit = inv.get("qty_per_unit", 1)
+            if qty_per_unit <= 0: qty_per_unit = 1
+            
+            items_needed = base_stock - current_stock
+            units_to_order = math.ceil(items_needed / qty_per_unit)
+            total_order_cost = units_to_order * inv.get("order_cost", 0.0)
+            items_received = units_to_order * qty_per_unit
+            
+            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_on_hand": items_received}})
+            
+            desc = f"Auto-Restock: {units_to_order}x {inv.get('size_per_unit', 'Unit')} of {inv['item_name']}"
+            ledger_entry = {"entry_type": "Expense", "description": desc, "amount": total_order_cost, "frequency": "Once", "entry_date": date_str}
+            db.ledger.insert_one(ledger_entry)
+            
+            if gc is not None:
+                row = [date_str, "Expense", desc, total_order_cost]
+                ledger_sheet.append_row(row)
+                
+            restock_messages.append(f"{desc} (Cost: {total_order_cost} gp)")
+
     sync_inventory_to_csv()
 
+    # 3. Pay Daily Wages
     daily_staff = db.staff.find({"frequency": "Daily"})
     for staff in daily_staff:
         if staff.get("wage", 0) > 0:
-            wage_entry = {
-                "entry_type": "Expense",
-                "description": f"Daily Wage: {staff['name']}",
-                "amount": staff["wage"],
-                "frequency": "Daily",
-                "entry_date": date_str
-            }
+            wage_entry = {"entry_type": "Expense", "description": f"Daily Wage: {staff['name']}", "amount": staff["wage"], "frequency": "Daily", "entry_date": date_str}
             db.ledger.insert_one(wage_entry)
             if gc is not None:
                 row = [date_str, "Expense", wage_entry["description"], wage_entry["amount"]]
                 ledger_sheet.append_row(row)
 
-    return {"status": "Day Saved Successfully"}
+    return {"status": "Day Saved Successfully", "restocks": restock_messages}
 
 @router.get("/api/inventory")
 def get_inventory():

@@ -31,48 +31,56 @@ async def lifespan(app: FastAPI):
                 reader = csv.DictReader(f)
                 for row in reader:
                     inv_list.append({
-                        "item_name": row.get("item_name", row.get("Item", "")),
-                        "stock_on_hand": parse_int(row.get("stock_on_hand", row.get("Stock on Hand", "0"))),
-                        "stock_on_order": parse_int(row.get("stock_on_order", row.get("Stock on Order", "0"))),
-                        "units_per": parse_int(row.get("units_per", row.get("Units Per", "1"))),
-                        "unit_price": parse_float(row.get("unit_price", row.get("Unit Price", "0.0")))
+                        "item_name": row.get("Item Name", row.get("item_name", "")),
+                        "stock_on_hand": parse_int(row.get("Stock on Hand", row.get("stock_on_hand", "0"))),
+                        "size_per_unit": row.get("Size per Unit", "Unit"),
+                        "qty_per_unit": parse_int(row.get("Qty per Unit", "1")),
+                        "order_cost": parse_float(row.get("Order Cost", "0.0")),
+                        "cost_per_item": parse_float(row.get("Cost per Item", "0.0")),
+                        "base_stock": parse_int(row.get("Base Stock", "0")),
+                        "restock_level": parse_int(row.get("Restock Level", "0")),
+                        "unit_price": parse_float(row.get("Sale Price", row.get("unit_price", "0.0")))
                     })
             if inv_list:
                 db.inventory.insert_many(inv_list)
         else:
             seed_items = [
-                {"item_name": "Moradin's Hammerfall (Heavy Pour)", "stock_on_hand": 60, "stock_on_order": 0, "units_per": 1, "unit_price": 2.0},
-                {"item_name": "First Frost Art Wine (Bottle)", "stock_on_hand": 10, "stock_on_order": 5, "units_per": 5, "unit_price": 25.0},
-                {"item_name": "Azun's Lament (Bottle)", "stock_on_hand": 12, "stock_on_order": 0, "units_per": 5, "unit_price": 15.0},
-                {"item_name": "Black Wyvern Porter (Tankard)", "stock_on_hand": 200, "stock_on_order": 100, "units_per": 1, "unit_price": 0.04},
-                {"item_name": "The 'Lif' Special (Glass)", "stock_on_hand": 50, "stock_on_order": 0, "units_per": 1, "unit_price": 0.8},
-                {"item_name": "Gumpfish Stew (Bowl)", "stock_on_hand": 30, "stock_on_order": 0, "units_per": 1, "unit_price": 0.3}
+                {"item_name": "Moradin's Hammerfall", "stock_on_hand": 120, "size_per_unit": "Keg", "qty_per_unit": 60, "order_cost": 30.0, "cost_per_item": 0.5, "base_stock": 240, "restock_level": 40, "unit_price": 2.0},
+                {"item_name": "First Frost Art Wine", "stock_on_hand": 10, "size_per_unit": "Case", "qty_per_unit": 6, "order_cost": 60.0, "cost_per_item": 10.0, "base_stock": 24, "restock_level": 6, "unit_price": 25.0},
+                {"item_name": "Black Wyvern Porter", "stock_on_hand": 200, "size_per_unit": "Large Keg", "qty_per_unit": 100, "order_cost": 1.0, "cost_per_item": 0.01, "base_stock": 300, "restock_level": 50, "unit_price": 0.04},
+                {"item_name": "Gumpfish Stew", "stock_on_hand": 30, "size_per_unit": "Pot", "qty_per_unit": 20, "order_cost": 2.0, "cost_per_item": 0.1, "base_stock": 60, "restock_level": 10, "unit_price": 0.3}
             ]
             db.inventory.insert_many(seed_items)
-            # Create the initial CSV
-            keys = ["item_name", "stock_on_hand", "stock_on_order", "units_per", "unit_price"]
+            
+            keys = ["Item Name", "Stock on Hand", "Size per Unit", "Qty per Unit", "Order Cost", "Cost per Item", "Base Stock", "Restock Level", "Sale Price"]
             with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=keys)
                 writer.writeheader()
                 for item in seed_items:
-                    writer.writerow(item)
+                    writer.writerow({
+                        "Item Name": item["item_name"],
+                        "Stock on Hand": item["stock_on_hand"],
+                        "Size per Unit": item["size_per_unit"],
+                        "Qty per Unit": item["qty_per_unit"],
+                        "Order Cost": item["order_cost"],
+                        "Cost per Item": item["cost_per_item"],
+                        "Base Stock": item["base_stock"],
+                        "Restock Level": item["restock_level"],
+                        "Sale Price": item["unit_price"]
+                    })
     
     if db.staff.count_documents({}) == 0:
         seed_staff = [
             {"name": "Lif the Poltergeist", "wage": 0.0, "frequency": "Daily", "bonus": 5},
             {"name": "Bepis Honeymaker (Cook)", "wage": 0.0, "frequency": "Daily", "bonus": 2},
             {"name": "Spider (Warforged Security Tier II)", "wage": 2.0, "frequency": "Daily", "bonus": 4},
-            {"name": "Amaryllis Thorne (Acrobat Guard Tier IV)", "wage": 1.5, "frequency": "Daily", "bonus": 3},
-            {"name": "Myrnd Gundwynd (Black Boar Vanguard)", "wage": 3.0, "frequency": "Daily", "bonus": 5},
-            {"name": "Istrid Horn (Treasury Security Tier I)", "wage": 5.0, "frequency": "Daily", "bonus": 6},
             {"name": "Tashlyn Yafeera (Head of Security Tier I)", "wage": 8.0, "frequency": "Daily", "bonus": 8}
         ]
         db.staff.insert_many(seed_staff)
 
     if db.ledger.count_documents({}) == 0:
         seed_ledger = [
-            {"entry_type": "Income", "description": "Ransom of the Twelve (Lord Lorahmar Djinni Rescue)", "amount": 11000.0, "frequency": "Once", "entry_date": "Ches 30"},
-            {"entry_type": "Income", "description": "Volo's Sponsorship (Brand Ambassador)", "amount": 50.0, "frequency": "Monthly", "entry_date": "Ches 30"}
+            {"entry_type": "Income", "description": "Ransom of the Twelve", "amount": 11000.0, "frequency": "Once", "entry_date": "Ches 30"}
         ]
         db.ledger.insert_many(seed_ledger)
 
