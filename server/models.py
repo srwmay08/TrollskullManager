@@ -27,13 +27,17 @@ class InventoryItem(BaseModel):
     item_name: str
     category: str
     order_unit: str
-    order_cost: float
+    order_quantity: int
+    unit_cost_copper: float
     qty_per_unit: int
-    cost_per_item: float
-    base_stock: int
-    restock_level: int
-    stock_on_hand: int
-    unit_price: float
+    serve_size: str
+    cost_per_item_copper: float
+    sell_price_copper: float
+    margin_copper: float
+    stock_unit_quantity: int
+    reorder_level: int
+    status: str
+    reorder_quantity: int
 
 class LedgerEntry(BaseModel):
     entry_type: str

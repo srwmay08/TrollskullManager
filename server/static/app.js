@@ -109,10 +109,27 @@ async function saveDay() {
 }
 
 function calcCost(id) {
-    const orderCost = parseFloat(document.getElementById(`inv_order_${id}`).value) || 0;
+    const orderCost = parseFloat(document.getElementById(`inv_order_cost_${id}`).value) || 0;
     const qtyPer = parseInt(document.getElementById(`inv_qty_per_${id}`).value) || 1;
+    const sellPrice = parseFloat(document.getElementById(`inv_sell_${id}`).value) || 0;
+    
     const costPer = orderCost / qtyPer;
+    const margin = sellPrice - costPer;
+
     document.getElementById(`inv_cost_per_${id}`).innerText = costPer.toFixed(2);
+    document.getElementById(`inv_margin_${id}`).innerText = margin.toFixed(2);
+    
+    const stock = parseInt(document.getElementById(`inv_stock_${id}`).value) || 0;
+    const reorderLvl = parseInt(document.getElementById(`inv_reorder_lvl_${id}`).value) || 0;
+    
+    const statusEl = document.getElementById(`inv_status_${id}`);
+    if (stock <= reorderLvl) {
+        statusEl.innerText = "ORDER";
+        statusEl.style.color = "#dc3545";
+    } else {
+        statusEl.innerText = "OK";
+        statusEl.style.color = "#28a745";
+    }
 }
 
 async function loadInventory() {
@@ -152,23 +169,27 @@ function renderInventory() {
     }
 
     let html = `
-        <table style="font-size: 13px; min-width: 1200px; border-collapse: collapse;">
+        <table style="font-size: 13px; min-width: 1400px; border-collapse: collapse;">
             <thead>
                 <tr>
-                    <th rowspan="2" style="cursor:pointer; width: 180px;" onclick="sortInventory('item_name')">Item Name ⇅</th>
-                    <th rowspan="2" style="cursor:pointer; width: 180px;" onclick="sortInventory('category')">Category ⇅</th>
-                    <th colspan="2" class="group-header bg-cost">ORDER BY</th>
-                    <th rowspan="2" title="Amount of items inside the Ordered Unit">Qty<br>per Unit</th>
-                    <th rowspan="2" class="bg-cost" title="Calculated break-down cost">Cost<br>per Item</th>
-                    <th rowspan="2" class="bg-stock">Base<br>Stock</th>
-                    <th rowspan="2" class="bg-stock">Restock<br>Level</th>
-                    <th rowspan="2" class="bg-stock">Stock<br>on Hand</th>
-                    <th rowspan="2" class="bg-revenue">Sale<br>Price (gp)</th>
+                    <th rowspan="2" style="cursor:pointer; width: 180px;" onclick="sortInventory('item_name')">CATEGORY / ITEM ⇅</th>
+                    <th colspan="3" class="group-header bg-cost">ORDER BY</th>
+                    <th colspan="2" class="group-header bg-stock">ITEMS / UNIT DETAILS</th>
+                    <th rowspan="2" class="bg-cost">COST PER ITEM</th>
+                    <th rowspan="2" class="bg-revenue">SELL PRICE<br>IN COPPER</th>
+                    <th rowspan="2" class="bg-revenue">MARGIN<br>IN COPPER</th>
+                    <th rowspan="2" class="bg-stock">STOCK UNIT<br>QUANTITY</th>
+                    <th rowspan="2" class="bg-stock">REORDER<br>LEVEL</th>
+                    <th rowspan="2" class="bg-stock">STATUS</th>
+                    <th rowspan="2" class="bg-stock">REORDER<br>QUANTITY</th>
                     <th rowspan="2" style="background-color: #333;">Action</th>
                 </tr>
                 <tr>
-                    <th class="bg-cost" style="width: 80px;">Order<br>Unit</th>
-                    <th class="bg-cost" style="width: 80px;">Order<br>Cost (gp)</th>
+                    <th class="bg-cost" style="width: 80px;">UNIT</th>
+                    <th class="bg-cost" style="width: 80px;">QUANTITY</th>
+                    <th class="bg-cost" style="width: 90px;">UNIT COST<br>IN COPPER</th>
+                    <th class="bg-stock" style="width: 80px;">QUANTITY<br>per UNIT</th>
+                    <th class="bg-stock" style="width: 90px;">SERVE SIZE</th>
                 </tr>
             </thead>
     `;
@@ -178,31 +199,36 @@ function renderInventory() {
         html += `
             <tbody>
                 <tr onclick="toggleInvCategory('${cat.replace(/'/g, "\\'")}')">
-                    <td colspan="11" class="cat-header">
-                        ${isCollapsed ? '▶' : '▼'} ${cat} (${groups[cat].length} Items)
+                    <td colspan="14" class="cat-header">
+                        ${isCollapsed ? '▶' : '▼'} ${cat.toUpperCase()} (${groups[cat].length} Items)
                     </td>
                 </tr>
         `;
         if (!isCollapsed) {
             groups[cat].forEach(item => {
+                const statusColor = (item.status === 'ORDER' || item.status === 'Order') ? '#dc3545' : '#28a745';
                 html += `
                     <tr>
                         <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}" style="width: 95%;"></td>
-                        <td><input class="editable-input" type="text" id="inv_cat_${item._id}" value="${item.category}" style="width: 95%;"></td>
                         
-                        <td style="background-color: rgba(107, 36, 36, 0.15); border-left: 1px solid #6b2424;"><input class="editable-input" type="text" id="inv_unit_${item._id}" value="${item.order_unit || 'Unit'}"></td>
-                        <td style="background-color: rgba(107, 36, 36, 0.15); border-right: 1px solid #6b2424;"><input class="editable-input small-input" type="number" id="inv_order_${item._id}" value="${item.order_cost || 0}" step="0.1" oninput="calcCost('${item._id}')"></td>
+                        <td style="background-color: rgba(107, 36, 36, 0.15); border-left: 1px solid #6b2424;"><input class="editable-input small-input" type="text" id="inv_unit_${item._id}" value="${item.order_unit || 'Unit'}"></td>
+                        <td style="background-color: rgba(107, 36, 36, 0.15);"><input class="editable-input small-input" type="number" id="inv_order_qty_${item._id}" value="${item.order_quantity || 1}"></td>
+                        <td style="background-color: rgba(107, 36, 36, 0.15); border-right: 1px solid #6b2424;"><input class="editable-input small-input" type="number" id="inv_order_cost_${item._id}" value="${item.unit_cost_copper || 0}" step="0.1" oninput="calcCost('${item._id}')"></td>
                         
-                        <td><input class="editable-input small-input" type="number" id="inv_qty_per_${item._id}" value="${item.qty_per_unit || 1}" oninput="calcCost('${item._id}')"></td>
-                        <td style="background-color: rgba(107, 36, 36, 0.3); font-weight: bold; text-align: center;"><span id="inv_cost_per_${item._id}" style="color:#d7ba7d;">${(item.cost_per_item || 0).toFixed(2)}</span></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2); border-left: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_qty_per_${item._id}" value="${item.qty_per_unit || 1}" oninput="calcCost('${item._id}')"></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2); border-right: 1px solid #1d4b6b;"><input class="editable-input small-input" style="width: 80px;" type="text" id="inv_serve_${item._id}" value="${item.serve_size || 'Standard'}"></td>
                         
-                        <td style="background-color: rgba(29, 75, 107, 0.2); border-left: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_base_${item._id}" value="${item.base_stock || 0}"></td>
-                        <td style="background-color: rgba(29, 75, 107, 0.2);"><input class="editable-input small-input" type="number" id="inv_restock_${item._id}" value="${item.restock_level || 0}"></td>
-                        <td style="background-color: rgba(29, 75, 107, 0.2); border-right: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_hand_${item._id}" value="${item.stock_on_hand || 0}"></td>
+                        <td style="background-color: rgba(107, 36, 36, 0.3); font-weight: bold; text-align: center;"><span id="inv_cost_per_${item._id}" style="color:#d7ba7d;">${(item.cost_per_item_copper || 0).toFixed(2)}</span></td>
                         
-                        <td style="background-color: rgba(33, 89, 52, 0.2); border-left: 1px solid #215934; border-right: 1px solid #215934;"><input class="editable-input small-input" type="number" id="inv_price_${item._id}" value="${item.unit_price || 0}" step="0.1"></td>
+                        <td style="background-color: rgba(33, 89, 52, 0.2); border-left: 1px solid #215934;"><input class="editable-input small-input" type="number" id="inv_sell_${item._id}" value="${item.sell_price_copper || 0}" step="0.1" oninput="calcCost('${item._id}')"></td>
+                        <td style="background-color: rgba(33, 89, 52, 0.2); border-right: 1px solid #215934; font-weight: bold; text-align: center;"><span id="inv_margin_${item._id}" style="color:#28a745;">${(item.margin_copper || 0).toFixed(2)}</span></td>
                         
-                        <td><button style="width: 100%; padding: 5px;" onclick="updateInventoryItem('${item._id}')">Save</button></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2); border-left: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_stock_${item._id}" value="${item.stock_unit_quantity || 0}" oninput="calcCost('${item._id}')"></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2);"><input class="editable-input small-input" type="number" id="inv_reorder_lvl_${item._id}" value="${item.reorder_level || 0}" oninput="calcCost('${item._id}')"></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2); font-weight: bold; text-align: center;"><span id="inv_status_${item._id}" style="color: ${statusColor};">${item.status || 'OK'}</span></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2); border-right: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_reorder_qty_${item._id}" value="${item.reorder_quantity || 0}"></td>
+                        
+                        <td><button style="width: 100%; padding: 5px;" onclick="updateInventoryItem('${item._id}', '${cat.replace(/'/g, "\\'")}')">Save</button></td>
                     </tr>
                 `;
             });
@@ -213,18 +239,22 @@ function renderInventory() {
     document.getElementById('inventory-container').innerHTML = html;
 }
 
-async function updateInventoryItem(id) {
+async function updateInventoryItem(id, cat) {
     const payload = {
         item_name: document.getElementById(`inv_name_${id}`).value,
-        category: document.getElementById(`inv_cat_${id}`).value,
-        stock_on_hand: parseInt(document.getElementById(`inv_hand_${id}`).value),
+        category: cat,
         order_unit: document.getElementById(`inv_unit_${id}`).value,
+        order_quantity: parseInt(document.getElementById(`inv_order_qty_${id}`).value),
+        unit_cost_copper: parseFloat(document.getElementById(`inv_order_cost_${id}`).value),
         qty_per_unit: parseInt(document.getElementById(`inv_qty_per_${id}`).value),
-        order_cost: parseFloat(document.getElementById(`inv_order_${id}`).value),
-        cost_per_item: parseFloat(document.getElementById(`inv_cost_per_${id}`).innerText),
-        base_stock: parseInt(document.getElementById(`inv_base_${id}`).value),
-        restock_level: parseInt(document.getElementById(`inv_restock_${id}`).value),
-        unit_price: parseFloat(document.getElementById(`inv_price_${id}`).value)
+        serve_size: document.getElementById(`inv_serve_${id}`).value,
+        cost_per_item_copper: parseFloat(document.getElementById(`inv_cost_per_${id}`).innerText),
+        sell_price_copper: parseFloat(document.getElementById(`inv_sell_${id}`).value),
+        margin_copper: parseFloat(document.getElementById(`inv_margin_${id}`).innerText),
+        stock_unit_quantity: parseInt(document.getElementById(`inv_stock_${id}`).value),
+        reorder_level: parseInt(document.getElementById(`inv_reorder_lvl_${id}`).value),
+        status: document.getElementById(`inv_status_${id}`).innerText,
+        reorder_quantity: parseInt(document.getElementById(`inv_reorder_qty_${id}`).value)
     };
     const response = await fetch(`${API_URL}/inventory/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if(response.ok) {

@@ -22,23 +22,37 @@ router = APIRouter()
 def sync_inventory_to_csv():
     items = list(db.inventory.find({}, {"_id": 0}))
     if not items: return
-    keys = ["Item Name", "Category", "Order Unit", "Order Cost", "Qty per Unit", "Cost per Item", "Base Stock", "Restock Level", "Stock on Hand", "Sale Price"]
+    
     with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
-        writer.writeheader()
+        writer = csv.writer(f)
+        writer.writerow(["", "ORDER BY", "", "", "ITEMS / UNIT DETAILS", "", "COST PER ITEM", "SELL PRICE IN COPPER", "MARGIN IN COPPER", "STOCK UNIT QUANTITY", "REORDER LEVEL", "STATUS", "REORDER QUANTITY"])
+        writer.writerow(["CATEGORY / ITEM", "UNIT", "QUANTITY", "UNIT COST IN COPPER", "QUANTITY per UNIT", "SERVE SIZE", "", "", "", "", "", "", ""])
+        
+        groups = {}
         for item in items:
-            writer.writerow({
-                "Item Name": item.get("item_name", ""),
-                "Category": item.get("category", "Uncategorized"),
-                "Order Unit": item.get("order_unit", "Unit"),
-                "Order Cost": item.get("order_cost", 0.0),
-                "Qty per Unit": item.get("qty_per_unit", 1),
-                "Cost per Item": item.get("cost_per_item", 0.0),
-                "Base Stock": item.get("base_stock", 0),
-                "Restock Level": item.get("restock_level", 0),
-                "Stock on Hand": item.get("stock_on_hand", 0),
-                "Sale Price": item.get("unit_price", 0.0)
-            })
+            cat = item.get("category", "Uncategorized")
+            if cat not in groups:
+                groups[cat] = []
+            groups[cat].append(item)
+            
+        for cat, cat_items in groups.items():
+            writer.writerow([cat] + [""] * 12)
+            for item in cat_items:
+                writer.writerow([
+                    item.get("item_name", ""),
+                    item.get("order_unit", ""),
+                    item.get("order_quantity", 1),
+                    item.get("unit_cost_copper", 0.0),
+                    item.get("qty_per_unit", 1),
+                    item.get("serve_size", ""),
+                    item.get("cost_per_item_copper", 0.0),
+                    item.get("sell_price_copper", 0.0),
+                    item.get("margin_copper", 0.0),
+                    item.get("stock_unit_quantity", 0),
+                    item.get("reorder_level", 0),
+                    item.get("status", "OK"),
+                    item.get("reorder_quantity", 0)
+                ])
 
 def sync_npcs_to_csv():
     items = list(db.npcs.find({}, {"_id": 0}))
@@ -109,7 +123,7 @@ def simulate_tavern_day(request: RollRequest):
         
     daily_visitors = [random.choice(valid_npcs) for _ in range(total_expected_patrons)]
 
-    inventory_db = list(db.inventory.find({"stock_on_hand": {"$gt": 0}}))
+    inventory_db = list(db.inventory.find({"stock_unit_quantity": {"$gt": 0}}))
     inventory_state = {str(item["_id"]): item for item in inventory_db}
 
     hours = ["12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM", "7 PM", "8 PM", "9 PM", "10 PM", "11 PM"]
@@ -155,17 +169,18 @@ def simulate_tavern_day(request: RollRequest):
             if seated_at != "Bounced":
                 active_patrons.append({"seat": seated_at, "departure_idx": current_hour_idx + duration})
                 
-                available_items = [item for item in inventory_state.values() if item["stock_on_hand"] > 0]
+                available_items = [item for item in inventory_state.values() if item["stock_unit_quantity"] > 0]
                 affordable_items = []
                 
+                # Prices are stored in copper, simulated vault assumes GP. 100 Copper = 1 GP.
                 if lifestyle in ["Squalid", "Poor"]:
-                    affordable_items = [i for i in available_items if i["unit_price"] <= 0.5]
+                    affordable_items = [i for i in available_items if (i["sell_price_copper"] / 100.0) <= 0.5]
                 elif lifestyle == "Modest":
-                    affordable_items = [i for i in available_items if 0.1 <= i["unit_price"] <= 2.0]
+                    affordable_items = [i for i in available_items if 0.1 <= (i["sell_price_copper"] / 100.0) <= 2.0]
                 elif lifestyle == "Comfortable":
-                    affordable_items = [i for i in available_items if 1.0 <= i["unit_price"] <= 10.0]
+                    affordable_items = [i for i in available_items if 1.0 <= (i["sell_price_copper"] / 100.0) <= 10.0]
                 else: 
-                    affordable_items = [i for i in available_items if i["unit_price"] >= 5.0]
+                    affordable_items = [i for i in available_items if (i["sell_price_copper"] / 100.0) >= 5.0]
 
                 if not affordable_items and available_items:
                     affordable_items = available_items
@@ -179,17 +194,19 @@ def simulate_tavern_day(request: RollRequest):
                         chosen_item = random.choice(affordable_items)
                         qty = 1
                         
-                        if chosen_item["stock_on_hand"] >= qty:
-                            chosen_item["stock_on_hand"] -= qty
-                            receipt_items.append({"name": chosen_item["item_name"], "qty": qty, "price": chosen_item["unit_price"] * qty})
-                            receipt_total += (chosen_item["unit_price"] * qty)
+                        if chosen_item["stock_unit_quantity"] >= qty:
+                            chosen_item["stock_unit_quantity"] -= qty
+                            price_in_gp = (chosen_item["sell_price_copper"] / 100.0)
+                            
+                            receipt_items.append({"name": chosen_item["item_name"], "qty": qty, "price": price_in_gp * qty})
+                            receipt_total += (price_in_gp * qty)
                             
                             if chosen_item["item_name"] not in consolidated_sales:
                                 consolidated_sales[chosen_item["item_name"]] = {"qty": 0, "total": 0.0, "id": str(chosen_item["_id"])}
                             consolidated_sales[chosen_item["item_name"]]["qty"] += qty
-                            consolidated_sales[chosen_item["item_name"]]["total"] += (chosen_item["unit_price"] * qty)
+                            consolidated_sales[chosen_item["item_name"]]["total"] += (price_in_gp * qty)
                             
-                            affordable_items = [i for i in affordable_items if i["stock_on_hand"] > 0]
+                            affordable_items = [i for i in affordable_items if i["stock_unit_quantity"] > 0]
 
                 if receipt_items:
                     customer_name = f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip()
@@ -218,8 +235,8 @@ def save_day_data(request: SaveDayRequest):
         
         inv_item = db.inventory.find_one({"item_name": sale.item_name})
         if inv_item:
-            new_stock = max(0, inv_item["stock_on_hand"] - sale.quantity)
-            db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_on_hand": new_stock}})
+            new_stock = max(0, inv_item["stock_unit_quantity"] - sale.quantity)
+            db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_unit_quantity": new_stock}})
 
         if gc is not None:
             row = [sale.sale_date, sale.item_name, sale.quantity, sale.total_price]
@@ -229,30 +246,31 @@ def save_day_data(request: SaveDayRequest):
 
     all_inventory = list(db.inventory.find())
     for inv in all_inventory:
-        current_stock = inv.get("stock_on_hand", 0)
-        restock_lvl = inv.get("restock_level", 0)
-        base_stock = inv.get("base_stock", 0)
+        current_stock = inv.get("stock_unit_quantity", 0)
+        restock_lvl = inv.get("reorder_level", 0)
         
-        if current_stock <= restock_lvl and base_stock > current_stock:
+        if current_stock <= restock_lvl:
             qty_per_unit = inv.get("qty_per_unit", 1)
             if qty_per_unit <= 0: qty_per_unit = 1
             
-            items_needed = base_stock - current_stock
-            units_to_order = math.ceil(items_needed / qty_per_unit)
-            total_order_cost = units_to_order * inv.get("order_cost", 0.0)
-            items_received = units_to_order * qty_per_unit
+            units_to_order = inv.get("reorder_quantity", 1)
+            if units_to_order <= 0: units_to_order = 1
             
-            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_on_hand": items_received}})
+            total_order_cost_copper = units_to_order * inv.get("unit_cost_copper", 0.0)
+            items_received = units_to_order * qty_per_unit
+            total_order_cost_gp = total_order_cost_copper / 100.0
+            
+            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_unit_quantity": items_received}})
             
             desc = f"Auto-Restock: {units_to_order}x {inv.get('order_unit', 'Unit')} of {inv['item_name']}"
-            ledger_entry = {"entry_type": "Expense", "description": desc, "amount": total_order_cost, "frequency": "Once", "entry_date": date_str}
+            ledger_entry = {"entry_type": "Expense", "description": desc, "amount": total_order_cost_gp, "frequency": "Once", "entry_date": date_str}
             db.ledger.insert_one(ledger_entry)
             
             if gc is not None:
-                row = [date_str, "Expense", desc, total_order_cost]
+                row = [date_str, "Expense", desc, total_order_cost_gp]
                 ledger_sheet.append_row(row)
                 
-            restock_messages.append(f"{desc} (Cost: {total_order_cost} gp)")
+            restock_messages.append(f"{desc} (Cost: {total_order_cost_gp} gp)")
 
     sync_inventory_to_csv()
 
