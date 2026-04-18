@@ -8,6 +8,7 @@ from models import InventoryItem
 from models import LedgerEntry
 from models import StaffItem
 from models import SaveDayRequest
+from models import NpcItem
 
 from database import db
 from database import gc
@@ -214,3 +215,18 @@ def get_reports():
         ledger.append(l)
         
     return {"sales": sales, "ledger": ledger}
+
+@router.get("/api/npcs")
+def get_npcs():
+    npc_cursor = db.npcs.find()
+    npc_list = []
+    for item in npc_cursor:
+        item["_id"] = str(item["_id"])
+        npc_list.append(item)
+    return npc_list
+
+@router.put("/api/npcs/{item_id}")
+def update_npc(item_id: str, item: NpcItem):
+    obj_id = ObjectId(item_id)
+    db.npcs.update_one({"_id": obj_id}, {"$set": item.dict()})
+    return {"status": "Updated"}

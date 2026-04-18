@@ -21,6 +21,7 @@
         <button onclick="switchTab('dashboard')">DASHBOARD</button>
         <button onclick="switchTab('inventory')">INVENTORY</button>
         <button onclick="switchTab('staff')">STAFF</button>
+        <button onclick="switchTab('npcs')">NPCS</button>
         <button onclick="switchTab('ledger')">LEDGER</button>
         <button onclick="switchTab('reports')">REPORTING</button>
     </nav>
@@ -124,6 +125,13 @@
             <tbody id="staff-table-body">
             </tbody>
         </table>
+    </div>
+
+    <div id="npcs" class="tab-content">
+        <h2>NPC Management & Dispositions</h2>
+        <p>Edit fields directly and click save on the row to update. Click headers to sort. Click Faction rows to collapse/expand.</p>
+        <button onclick="loadNpcs()">Refresh NPC List</button>
+        <div id="npc-container" style="margin-top: 20px;"></div>
     </div>
 
     <div id="ledger" class="tab-content">

@@ -35,3 +35,13 @@ class StaffItem(BaseModel):
 class SaveDayRequest(BaseModel):
     calendar_date: str
     sales: List[SaleItem]
+
+class NpcItem(BaseModel):
+    first_name: str
+    last_name: str
+    type: str
+    lifestyle: str
+    affiliation: str
+    age: int
+    bar_disposition: int
+    party_disposition: int

@@ -1,6 +1,11 @@
 const API_URL = "http://localhost:8000/api";
 let pendingAutoSales = [];
 
+let npcData = [];
+let npcSortCol = "first_name";
+let npcSortDir = 1;
+let collapsedFactions = {};
+
 function switchTab(tabId) {
     const tabs = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
@@ -11,6 +16,7 @@ function switchTab(tabId) {
     if(tabId === 'inventory') loadInventory();
     if(tabId === 'staff') loadStaff();
     if(tabId === 'ledger') loadLedger();
+    if(tabId === 'npcs') loadNpcs();
 }
 
 async function rollOutcome() {
@@ -80,6 +86,28 @@ async function saveDay() {
         pendingAutoSales = [];
         document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger.</em>";
         document.getElementById('out-hourly').innerHTML = "<em>Tavern is now closed for the day.</em>";
+    }
+}
+
+async function submitManualSale() {
+    const dateStr = document.getElementById('global_date').value;
+    const payload = {
+        item_name: document.getElementById('sale_item').value,
+        quantity: parseInt(document.getElementById('sale_qty').value),
+        total_price: parseFloat(document.getElementById('sale_price').value),
+        sale_date: dateStr
+    };
+
+    const response = await fetch(`${API_URL}/sales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if(response.ok) {
+        alert("Manual sale recorded.");
+        document.getElementById('sale_item').value = "";
+        document.getElementById('sale_price').value = "0.0";
     }
 }
 
@@ -237,6 +265,128 @@ async function loadReports() {
         <p><strong>Net Vault Profit/Loss:</strong> <span style="color: ${net >= 0 ? '#28a745' : '#dc3545'}; font-size: 18px; font-weight: bold;">${net.toFixed(2)} gp</span></p>
         <p><em>(Data spans all recorded dates in the database)</em></p>
     `;
+}
+
+async function loadNpcs() {
+    const response = await fetch(`${API_URL}/npcs`);
+    npcData = await response.json();
+    renderNpcs();
+}
+
+function sortNpcs(col) {
+    if (npcSortCol === col) {
+        npcSortDir *= -1;
+    } else {
+        npcSortCol = col;
+        npcSortDir = 1;
+    }
+    renderNpcs();
+}
+
+function toggleFaction(faction) {
+    collapsedFactions[faction] = !collapsedFactions[faction];
+    renderNpcs();
+}
+
+function renderNpcs() {
+    const groups = {};
+    npcData.forEach(npc => {
+        const affil = npc.affiliation || "Unaffiliated";
+        if (!groups[affil]) groups[affil] = [];
+        groups[affil].push(npc);
+    });
+
+    for (let affil in groups) {
+        groups[affil].sort((a, b) => {
+            let valA = a[npcSortCol];
+            let valB = b[npcSortCol];
+            
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            
+            if (valA < valB) return -1 * npcSortDir;
+            if (valA > valB) return 1 * npcSortDir;
+            return 0;
+        });
+    }
+
+    let html = `
+        <table style="font-size: 14px;">
+            <thead>
+                <tr>
+                    <th style="cursor:pointer;" onclick="sortNpcs('first_name')">First Name ⇅</th>
+                    <th style="cursor:pointer;" onclick="sortNpcs('last_name')">Last Name ⇅</th>
+                    <th style="cursor:pointer;" onclick="sortNpcs('type')">Type ⇅</th>
+                    <th style="cursor:pointer;" onclick="sortNpcs('lifestyle')">Lifestyle ⇅</th>
+                    <th style="cursor:pointer;" onclick="sortNpcs('affiliation')">Affiliation ⇅</th>
+                    <th style="cursor:pointer; width:60px;" onclick="sortNpcs('age')">Age ⇅</th>
+                    <th style="cursor:pointer; width:60px;" onclick="sortNpcs('bar_disposition')">Bar Disp ⇅</th>
+                    <th style="cursor:pointer; width:60px;" onclick="sortNpcs('party_disposition')">Party Disp ⇅</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+    `;
+
+    for (let affil in groups) {
+        const isCollapsed = collapsedFactions[affil];
+        html += `
+            <tbody>
+                <tr class="faction-header" onclick="toggleFaction('${affil.replace(/'/g, "\\'")}')">
+                    <td colspan="9" style="background-color: #333; cursor: pointer; color: #d7ba7d; font-weight: bold; padding: 10px;">
+                        ${isCollapsed ? '▶' : '▼'} ${affil} (${groups[affil].length})
+                    </td>
+                </tr>
+        `;
+        if (!isCollapsed) {
+            groups[affil].forEach(npc => {
+                html += `
+                    <tr>
+                        <td><input class="editable-input" type="text" id="npc_fn_${npc._id}" value="${npc.first_name || ''}"></td>
+                        <td><input class="editable-input" type="text" id="npc_ln_${npc._id}" value="${npc.last_name || ''}"></td>
+                        <td><input class="editable-input" type="text" id="npc_type_${npc._id}" value="${npc.type || ''}"></td>
+                        <td><input class="editable-input" type="text" id="npc_life_${npc._id}" value="${npc.lifestyle || ''}"></td>
+                        <td><input class="editable-input" type="text" id="npc_affil_${npc._id}" value="${npc.affiliation || ''}"></td>
+                        <td><input class="editable-input" type="number" id="npc_age_${npc._id}" value="${npc.age || 0}" style="width:100%;"></td>
+                        <td><input class="editable-input" type="number" id="npc_bar_${npc._id}" value="${npc.bar_disposition || 0}" style="width:100%;"></td>
+                        <td><input class="editable-input" type="number" id="npc_party_${npc._id}" value="${npc.party_disposition || 0}" style="width:100%;"></td>
+                        <td><button onclick="updateNpcItem('${npc._id}')">Save</button></td>
+                    </tr>
+                `;
+            });
+        }
+        html += `</tbody>`;
+    }
+    html += `</table>`;
+
+    document.getElementById('npc-container').innerHTML = html;
+}
+
+async function updateNpcItem(id) {
+    const payload = {
+        first_name: document.getElementById(`npc_fn_${id}`).value,
+        last_name: document.getElementById(`npc_ln_${id}`).value,
+        type: document.getElementById(`npc_type_${id}`).value,
+        lifestyle: document.getElementById(`npc_life_${id}`).value,
+        affiliation: document.getElementById(`npc_affil_${id}`).value,
+        age: parseInt(document.getElementById(`npc_age_${id}`).value) || 0,
+        bar_disposition: parseInt(document.getElementById(`npc_bar_${id}`).value) || 0,
+        party_disposition: parseInt(document.getElementById(`npc_party_${id}`).value) || 0
+    };
+
+    const response = await fetch(`${API_URL}/npcs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if(response.ok) {
+        alert("NPC updated.");
+        const idx = npcData.findIndex(n => n._id === id);
+        if (idx > -1) {
+            npcData[idx] = { ...npcData[idx], ...payload, _id: id };
+        }
+        renderNpcs();
+    }
 }
 
 window.onload = function() {

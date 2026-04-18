@@ -123,6 +123,10 @@ th {
     background-color: #333;
 }
 
+.faction-header:hover td {
+    background-color: #444 !important;
+}
+
 .editable-input {
     width: 90%;
     background: transparent;
