@@ -25,8 +25,26 @@ def calculate_tavern_outcome(request: RollRequest):
         total_staff_bonus += staff.get("bonus", 0)
 
     total_roll = request.base_roll + total_staff_bonus + request.renown_bonus + request.environmental_bonus
-    outcome = "Standard Day"
     
+    demand_multiplier = 1.0
+    winter_penalty = 0
+    is_shieldmeet = False
+    is_feast_of_moon = False
+    is_winter = False
+    
+    if request.current_date:
+        if request.current_date.month in [1, 2]:
+            winter_penalty = 10
+            is_winter = True
+        if request.current_date.is_holiday:
+            demand_multiplier = 2.0
+            if request.current_date.holiday_name == "Feast of the Moon":
+                is_feast_of_moon = True
+        if request.current_date.is_shieldmeet:
+            demand_multiplier = random.uniform(3.0, 4.0)
+            is_shieldmeet = True
+
+    outcome = "Standard Day"
     patrons = 0
     vip_patrons = 0
 
@@ -46,11 +64,21 @@ def calculate_tavern_outcome(request: RollRequest):
         outcome = "Windfall: The tavern is packed!"
         patrons = 54
 
+    patrons = int((patrons * demand_multiplier) - winter_penalty)
+    if patrons < 0:
+        patrons = 0
+        
+    if is_shieldmeet:
+        outcome = "SHIELDMEET: Absolute chaos, maximum capacity!"
+    elif is_feast_of_moon:
+        outcome = f"{outcome} (Feast of the Moon Event)"
+
     if total_roll > 60:
         vip_check = random.randint(1, 20)
         if vip_check >= 14:
             vip_fullness = random.randint(1, 100)
             vip_patrons = max(1, int((vip_fullness / 100.0) * 10))
+            vip_patrons = int(vip_patrons * demand_multiplier)
 
     friendly_npcs = list(db.npcs.find({"bar_disposition": {"$gt": 0}}))
     neutral_npcs = list(db.npcs.find({"bar_disposition": 0}))
@@ -96,6 +124,15 @@ def calculate_tavern_outcome(request: RollRequest):
                 food_qty += 1
 
     generated_sales = []
+    
+    if is_feast_of_moon and ale_qty > 0:
+        generated_sales.append({"item_name": "Commemorative Feast Ale", "quantity": ale_qty, "total_price": ale_qty * 1.5})
+        ale_qty = 0
+        
+    if is_winter and food_qty > 0:
+        generated_sales.append({"item_name": "Hot Stew & Mulled Wine", "quantity": food_qty, "total_price": food_qty * 2.5})
+        food_qty = 0
+
     if ale_qty > 0:
         generated_sales.append({"item_name": "Standard Ale/Drinks", "quantity": ale_qty, "total_price": ale_qty * 0.5})
     if food_qty > 0:

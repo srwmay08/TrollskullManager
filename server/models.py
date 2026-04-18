@@ -1,10 +1,20 @@
 from pydantic import BaseModel
 from typing import List
+from typing import Optional
+
+class HarptosState(BaseModel):
+    month: int
+    day: int
+    year: int
+    is_holiday: bool = False
+    holiday_name: Optional[str] = None
+    is_shieldmeet: bool = False
 
 class RollRequest(BaseModel):
     base_roll: int
     renown_bonus: int
     environmental_bonus: int
+    current_date: Optional[HarptosState] = None
 
 class SaleItem(BaseModel):
     item_name: str
