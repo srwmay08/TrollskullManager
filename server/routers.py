@@ -1,4 +1,5 @@
 import random
+import csv
 from fastapi import APIRouter
 from bson.objectid import ObjectId
 
@@ -17,194 +18,206 @@ from database import ledger_sheet
 
 router = APIRouter()
 
-@router.post("/api/roll")
-def calculate_tavern_outcome(request: RollRequest):
-    staff_cursor = db.staff.find()
-    total_staff_bonus = 0
-    for staff in staff_cursor:
-        total_staff_bonus += staff.get("bonus", 0)
+def sync_inventory_to_csv():
+    items = list(db.inventory.find({}, {"_id": 0}))
+    if not items: return
+    keys = ["item_name", "stock_on_hand", "stock_on_order", "units_per", "unit_price"]
+    with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        for item in items:
+            writer.writerow(item)
 
+def sync_npcs_to_csv():
+    items = list(db.npcs.find({}, {"_id": 0}))
+    if not items: return
+    keys = ["First Name", "Last Name", "Occupation", "Lifestyle", "Faction", "Age", "Bar Disposition", "Party Disposition", "Nobility Status", "Noble House", "Story Connection", "PC Affiliation"]
+    with open("npcs.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        for item in items:
+            writer.writerow({
+                "First Name": item.get("first_name", ""),
+                "Last Name": item.get("last_name", ""),
+                "Occupation": item.get("occupation", ""),
+                "Lifestyle": item.get("lifestyle", ""),
+                "Faction": item.get("faction", ""),
+                "Age": item.get("age", 0),
+                "Bar Disposition": item.get("bar_disposition", 0),
+                "Party Disposition": item.get("party_disposition", 0),
+                "Nobility Status": item.get("nobility_status", ""),
+                "Noble House": item.get("noble_house", ""),
+                "Story Connection": item.get("story_connection", ""),
+                "PC Affiliation": item.get("pc_affiliation", "")
+            })
+
+@router.post("/api/roll")
+def simulate_tavern_day(request: RollRequest):
+    staff_cursor = db.staff.find()
+    total_staff_bonus = sum(staff.get("bonus", 0) for staff in staff_cursor)
     total_roll = request.base_roll + total_staff_bonus + request.renown_bonus + request.environmental_bonus
     
     demand_multiplier = 1.0
     winter_penalty = 0
-    is_shieldmeet = False
-    is_feast_of_moon = False
-    is_winter = False
-    
     if request.current_date:
         if request.current_date.month in [1, 2]:
             winter_penalty = 10
-            is_winter = True
         if request.current_date.is_holiday:
             demand_multiplier = 2.0
-            if request.current_date.holiday_name == "Feast of the Moon":
-                is_feast_of_moon = True
         if request.current_date.is_shieldmeet:
             demand_multiplier = random.uniform(3.0, 4.0)
-            is_shieldmeet = True
 
-    outcome = "Standard Day"
     total_expected_patrons = 0
-
-    if total_roll <= 20:
-        outcome = "Disaster: Poor word of mouth."
-        total_expected_patrons = random.randint(5, 20)
-    elif total_roll <= 40:
-        outcome = "Poor Day: Slow business."
-        total_expected_patrons = random.randint(20, 40)
-    elif total_roll <= 60:
-        outcome = "Average Day: Modest crowd."
-        total_expected_patrons = random.randint(40, 80)
-    elif total_roll <= 80:
-        outcome = "Good Day: Busy tavern."
-        total_expected_patrons = random.randint(80, 120)
-    else:
-        outcome = "Windfall: The tavern is packed!"
-        total_expected_patrons = random.randint(120, 180)
+    if total_roll <= 20: total_expected_patrons = random.randint(5, 20)
+    elif total_roll <= 40: total_expected_patrons = random.randint(20, 40)
+    elif total_roll <= 60: total_expected_patrons = random.randint(40, 80)
+    elif total_roll <= 80: total_expected_patrons = random.randint(80, 120)
+    else: total_expected_patrons = random.randint(120, 180)
 
     total_expected_patrons = int((total_expected_patrons * demand_multiplier) - winter_penalty)
-    if total_expected_patrons < 0:
-        total_expected_patrons = 0
+    if total_expected_patrons < 0: total_expected_patrons = 0
 
-    if is_shieldmeet:
-        outcome = "SHIELDMEET: Absolute chaos, maximum capacity!"
-    elif is_feast_of_moon:
-        outcome = f"{outcome} (Feast of the Moon Event)"
-
-    # Pricing Strategy Adjustments
     strategy = request.price_strategy
-    brawl_chance = 0.05
     allowed_lifestyles = []
-    
     if strategy == "Dive":
-        outcome += " (Dive Pricing: High volume, high friction)"
         total_expected_patrons = int(total_expected_patrons * 1.5)
         allowed_lifestyles = ["Squalid", "Poor", "Modest"]
-        brawl_chance = 0.25
     elif strategy == "Standard":
         allowed_lifestyles = ["Poor", "Modest", "Comfortable", "Wealthy"]
     elif strategy == "Premium":
-        outcome += " (Premium Pricing: Reduced volume, higher margins)"
         total_expected_patrons = int(total_expected_patrons * 0.7)
         allowed_lifestyles = ["Comfortable", "Wealthy", "Aristocratic"]
     elif strategy == "Exclusive":
-        outcome += " (Exclusive Pricing: Very low volume, extreme margins)"
         total_expected_patrons = int(total_expected_patrons * 0.4)
         allowed_lifestyles = ["Wealthy", "Aristocratic"]
 
     all_npcs = list(db.npcs.find())
     valid_npcs = [npc for npc in all_npcs if npc.get("lifestyle", "Modest") in allowed_lifestyles]
-    if not valid_npcs:
-        valid_npcs = all_npcs # Fallback if database is misconfigured
+    if not valid_npcs: valid_npcs = all_npcs 
         
-    daily_visitors = []
-    for _ in range(total_expected_patrons):
-        daily_visitors.append(random.choice(valid_npcs))
+    daily_visitors = [random.choice(valid_npcs) for _ in range(total_expected_patrons)]
+
+    # Load Inventory State for Simulation
+    inventory_db = list(db.inventory.find({"stock_on_hand": {"$gt": 0}}))
+    inventory_state = {str(item["_id"]): item for item in inventory_db}
 
     hours = ["12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM", "7 PM", "8 PM", "9 PM", "10 PM", "11 PM"]
-    
     cap_tables = 44
     cap_bar = 10
     cap_vip = 10
     cap_stand = random.randint(20, 40)
     
     active_patrons = []
-    hourly_logs = []
-    total_sales_generated = []
-    
-    total_revenue_pool = 0.0
+    customer_receipts = []
+    consolidated_sales = {}
 
     for current_hour_idx, hr in enumerate(hours):
-        # Remove patrons whose duration is up
         active_patrons = [p for p in active_patrons if p["departure_idx"] > current_hour_idx]
+        arrivals_count = max(0, int(total_expected_patrons / len(hours)) + random.randint(-2, 5))
         
-        # Determine arrivals for this hour
-        arrivals_count = int(total_expected_patrons / len(hours))
-        # Add some variance
-        arrivals_count = max(0, arrivals_count + random.randint(-2, 5))
-        
-        arrivals_this_hour = []
         for _ in range(arrivals_count):
-            if daily_visitors:
-                visitor = daily_visitors.pop(0)
-                duration = random.randint(1, 3)
+            if not daily_visitors: break
+            visitor = daily_visitors.pop(0)
+            duration = random.randint(1, 3)
+            
+            lifestyle = visitor.get("lifestyle", "Modest")
+            seated_at = "Bounced"
+            
+            current_vips = len([p for p in active_patrons if p["seat"] == "VIP"])
+            current_tables = len([p for p in active_patrons if p["seat"] == "Table"])
+            current_bars = len([p for p in active_patrons if p["seat"] == "Bar"])
+            current_stands = len([p for p in active_patrons if p["seat"] == "Standing"])
+            
+            if lifestyle in ["Wealthy", "Aristocratic"] and current_vips < cap_vip:
+                seated_at = "VIP"
+            elif lifestyle in ["Wealthy", "Aristocratic"] and current_tables < cap_tables:
+                seated_at = "Table"
+            elif lifestyle in ["Wealthy", "Aristocratic"]:
+                seated_at = "Bounced" 
+            elif current_tables < cap_tables:
+                seated_at = "Table"
+            elif current_bars < cap_bar:
+                seated_at = "Bar"
+            elif current_stands < cap_stand:
+                seated_at = "Standing"
+            
+            if seated_at != "Bounced":
+                active_patrons.append({
+                    "seat": seated_at,
+                    "departure_idx": current_hour_idx + duration
+                })
                 
-                # Try to seat them
-                seated_at = "Bounced"
-                lifestyle = visitor.get("lifestyle", "Modest")
+                # Generate Receipt based on Lifestyle and Inventory
+                available_items = [item for item in inventory_state.values() if item["stock_on_hand"] > 0]
+                affordable_items = []
                 
-                current_vips = len([p for p in active_patrons if p["seat"] == "VIP"])
-                current_tables = len([p for p in active_patrons if p["seat"] == "Table"])
-                current_bars = len([p for p in active_patrons if p["seat"] == "Bar"])
-                current_stands = len([p for p in active_patrons if p["seat"] == "Standing"])
+                if lifestyle in ["Squalid", "Poor"]:
+                    affordable_items = [i for i in available_items if i["unit_price"] <= 0.5]
+                elif lifestyle == "Modest":
+                    affordable_items = [i for i in available_items if 0.1 <= i["unit_price"] <= 2.0]
+                elif lifestyle == "Comfortable":
+                    affordable_items = [i for i in available_items if 1.0 <= i["unit_price"] <= 10.0]
+                else: # Wealthy / Aristocratic
+                    affordable_items = [i for i in available_items if i["unit_price"] >= 5.0]
+
+                # Fallback if specific tier is empty but they want something
+                if not affordable_items and available_items:
+                    affordable_items = available_items
+
+                receipt_items = []
+                receipt_total = 0.0
                 
-                if lifestyle in ["Wealthy", "Aristocratic"] and current_vips < cap_vip:
-                    seated_at = "VIP"
-                elif lifestyle in ["Wealthy", "Aristocratic"] and current_tables < cap_tables:
-                    seated_at = "Table"
-                elif lifestyle in ["Wealthy", "Aristocratic"]:
-                    seated_at = "Bounced" # Rich refuse to stand or sit at bar
-                elif current_tables < cap_tables:
-                    seated_at = "Table"
-                elif current_bars < cap_bar:
-                    seated_at = "Bar"
-                elif current_stands < cap_stand:
-                    seated_at = "Standing"
-                
-                if seated_at != "Bounced":
-                    active_patrons.append({
-                        "name": f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip(),
+                num_items_to_buy = random.randint(1, 3)
+                for _ in range(num_items_to_buy):
+                    if affordable_items:
+                        chosen_item = random.choice(affordable_items)
+                        qty = 1
+                        
+                        if chosen_item["stock_on_hand"] >= qty:
+                            chosen_item["stock_on_hand"] -= qty
+                            
+                            receipt_items.append({
+                                "name": chosen_item["item_name"],
+                                "qty": qty,
+                                "price": chosen_item["unit_price"] * qty
+                            })
+                            receipt_total += (chosen_item["unit_price"] * qty)
+                            
+                            # Track for final save
+                            if chosen_item["item_name"] not in consolidated_sales:
+                                consolidated_sales[chosen_item["item_name"]] = {"qty": 0, "total": 0.0, "id": str(chosen_item["_id"])}
+                            consolidated_sales[chosen_item["item_name"]]["qty"] += qty
+                            consolidated_sales[chosen_item["item_name"]]["total"] += (chosen_item["unit_price"] * qty)
+                            
+                            # Refresh affordable items in case stock hit 0
+                            affordable_items = [i for i in affordable_items if i["stock_on_hand"] > 0]
+
+                if receipt_items:
+                    customer_name = f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip()
+                    customer_receipts.append({
+                        "name": customer_name,
                         "lifestyle": lifestyle,
                         "seat": seated_at,
-                        "departure_idx": current_hour_idx + duration
+                        "hour": hr,
+                        "items": receipt_items,
+                        "total": receipt_total
                     })
-                    arrivals_this_hour.append(visitor)
-                    
-                    # Calculate spend
-                    spend = 0.0
-                    if lifestyle == "Squalid" or lifestyle == "Poor":
-                        spend = random.uniform(0.1, 0.3)
-                    elif lifestyle == "Modest":
-                        spend = random.uniform(0.5, 1.5)
-                    elif lifestyle == "Comfortable":
-                        spend = random.uniform(2.0, 4.0)
-                    elif lifestyle == "Wealthy":
-                        spend = random.uniform(5.0, 10.0)
-                    elif lifestyle == "Aristocratic":
-                        spend = random.uniform(15.0, 50.0)
-                        
-                    total_revenue_pool += spend
 
-        # Compile hour stats
-        log_entry = {
-            "hour": hr,
-            "arrivals": len(arrivals_this_hour),
-            "table_used": len([p for p in active_patrons if p["seat"] == "Table"]),
-            "bar_used": len([p for p in active_patrons if p["seat"] == "Bar"]),
-            "vip_used": len([p for p in active_patrons if p["seat"] == "VIP"]),
-            "stand_used": len([p for p in active_patrons if p["seat"] == "Standing"]),
-            "brawls": 1 if random.random() < brawl_chance and len(active_patrons) > 20 else 0
-        }
-        hourly_logs.append(log_entry)
+    # Prepare final sales list
+    final_auto_sales = []
+    for item_name, data in consolidated_sales.items():
+        final_auto_sales.append({
+            "item_name": item_name,
+            "quantity": data["qty"],
+            "total_price": data["total"],
+            "inv_id": data["id"]
+        })
 
-    # Condense sales into categories
-    total_sales_generated.append({
-        "item_name": f"{strategy} Service Food & Drink", 
-        "quantity": total_expected_patrons, 
-        "total_price": total_revenue_pool
-    })
-
-    result = {
+    return {
         "total_roll": total_roll,
-        "staff_bonus_applied": total_staff_bonus,
-        "outcome": outcome,
-        "main_patrons": total_expected_patrons,
-        "vip_patrons": 0, # integrated into hourly logs
-        "auto_sales": total_sales_generated,
-        "hourly_breakdown": hourly_logs
+        "auto_sales": final_auto_sales,
+        "receipts": customer_receipts
     }
-    return result
 
 @router.post("/api/save_day")
 def save_day_data(request: SaveDayRequest):
@@ -213,9 +226,18 @@ def save_day_data(request: SaveDayRequest):
         sale.sale_date = date_str
         sale_dict = sale.dict()
         db.sales.insert_one(sale_dict)
+        
+        # Deduct from actual DB inventory
+        inv_item = db.inventory.find_one({"item_name": sale.item_name})
+        if inv_item:
+            new_stock = max(0, inv_item["stock_on_hand"] - sale.quantity)
+            db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_on_hand": new_stock}})
+
         if gc is not None:
             row = [sale.sale_date, sale.item_name, sale.quantity, sale.total_price]
             sales_sheet.append_row(row)
+
+    sync_inventory_to_csv()
 
     daily_staff = db.staff.find({"frequency": "Daily"})
     for staff in daily_staff:
@@ -248,12 +270,14 @@ def add_inventory(item: InventoryItem):
     item_dict = item.dict()
     db.inventory.insert_one(item_dict)
     item_dict["_id"] = str(item_dict["_id"])
+    sync_inventory_to_csv()
     return item_dict
 
 @router.put("/api/inventory/{item_id}")
 def update_inventory(item_id: str, item: InventoryItem):
     obj_id = ObjectId(item_id)
     db.inventory.update_one({"_id": obj_id}, {"$set": item.dict()})
+    sync_inventory_to_csv()
     return {"status": "Updated"}
 
 @router.get("/api/staff")
@@ -320,4 +344,5 @@ def get_npcs():
 def update_npc(item_id: str, item: NpcItem):
     obj_id = ObjectId(item_id)
     db.npcs.update_one({"_id": obj_id}, {"$set": item.dict()})
+    sync_npcs_to_csv()
     return {"status": "Updated"}

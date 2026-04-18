@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trollskull Tavern Management</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .receipt-card {
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .receipt-card h4 {
+            margin: 0 0 5px 0;
+            color: #d7ba7d;
+        }
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            border-bottom: 1px dashed #333;
+            padding: 2px 0;
+        }
+        .receipt-total {
+            text-align: right;
+            font-weight: bold;
+            color: #28a745;
+            margin-top: 5px;
+        }
+        .receipt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+    </style>
 </head>
 <body>
 
@@ -14,12 +49,12 @@
             <label style="margin:0; font-weight:bold;">Current Date:</label>
             <span id="global_date_display" style="color: #d7ba7d; font-size: 16px; min-width: 180px; display:inline-block;"></span>
             <button class="save-btn" style="background-color: #007acc;" onclick="advanceDate()">Advance Day</button>
-            <button class="save-btn" onclick="saveDay()">Save Day to Ledger & Sales</button>
+            <button class="save-btn" onclick="saveDay()">Save Day to Ledger & Deduct Inventory</button>
         </div>
     </div>
 
     <nav>
-        <button onclick="switchTab('dashboard')">DASHBOARD</button>
+        <button onclick="switchTab('dashboard')">DAILY SIMULATION</button>
         <button onclick="switchTab('inventory')">INVENTORY</button>
         <button onclick="switchTab('staff')">STAFF</button>
         <button onclick="switchTab('npcs')">NPCS</button>
@@ -28,29 +63,15 @@
     </nav>
 
     <div id="dashboard" class="tab-content active-tab">
-        <h2>Tavern Status & Operations</h2>
+        <h2>Tavern Simulation Engine</h2>
+        <p><em>Patrons will order specific items from the Inventory tab based on their lifestyle and the item's unit price. Stock is tracked during the simulation and permanently deducted upon clicking Save Day.</em></p>
         
-        <div class="stats-box">
-            <div class="stat-card">
-                <h3>Total Physical Capacity</h3>
-                <p>104 Max (inc. Standing)</p>
-            </div>
-            <div class="stat-card">
-                <h3>Main Floor Seats</h3>
-                <p>54 Seats (10 Bar, 44 Table)</p>
-            </div>
-            <div class="stat-card">
-                <h3>VIP Booth</h3>
-                <p>10 Seats</p>
-            </div>
-        </div>
-
-        <div style="display:flex; gap: 20px;">
-            <div style="flex:1;">
+        <div style="display:flex; gap: 20px; margin-bottom: 20px;">
+            <div style="flex:1; background-color: #252526; padding: 15px; border-radius: 4px;">
                 <div class="form-group">
                     <label>Menu Pricing Strategy:</label>
                     <select id="price_strategy">
-                        <option value="Dive">Dive (Cheap, High Volume, High Brawl Risk)</option>
+                        <option value="Dive">Dive (Cheap, High Volume)</option>
                         <option value="Standard" selected>Standard (Balanced)</option>
                         <option value="Premium">Premium (Comfortable/Wealthy Only)</option>
                         <option value="Exclusive">Exclusive (Wealthy/Aristocratic Only)</option>
@@ -68,38 +89,24 @@
                     <label>Environmental Effects (+):</label>
                     <input type="number" id="env_bonus" value="0">
                 </div>
-                <button onclick="rollOutcome()">Generate Daily Outcome</button>
+                <button onclick="rollOutcome()" style="width: 100%; font-weight: bold; font-size: 16px;">Simulate Operating Day</button>
             </div>
             
-            <div style="flex:2;" id="outcome-result" style="display: none; padding: 15px; background-color: #333; border-radius: 4px;">
-                <h3 id="out-title">Result</h3>
-                <p id="out-desc" style="color:#d7ba7d; font-weight:bold;"></p>
-                
-                <div class="auto-sales-list" id="out-sales"></div>
-                
-                <h4 style="margin-top:20px;">Hourly Simulation Log</h4>
-                <table style="font-size: 13px;">
-                    <thead>
-                        <tr>
-                            <th>Hour</th>
-                            <th>Arrivals</th>
-                            <th>Table (44)</th>
-                            <th>Bar (10)</th>
-                            <th>VIP (10)</th>
-                            <th>Stand (Var)</th>
-                            <th>Incident?</th>
-                        </tr>
-                    </thead>
-                    <tbody id="out-hourly">
-                    </tbody>
-                </table>
+            <div style="flex:1; background-color: #252526; padding: 15px; border-radius: 4px;">
+                <h3 style="margin-top:0;">Consolidated Daily Sales</h3>
+                <div id="out-sales"><em>Run simulation to view total items sold.</em></div>
             </div>
+        </div>
+
+        <div id="outcome-result" style="display: none;">
+            <h3>Individual Customer Receipts</h3>
+            <div class="receipt-grid" id="out-receipts"></div>
         </div>
     </div>
 
     <div id="inventory" class="tab-content">
-        <h2>Inventory Management</h2>
-        <p>Edit fields directly and click save on the row to update.</p>
+        <h2>Inventory Management (Auto-Syncs with inventory.csv)</h2>
+        <p>Edit fields directly and click save on the row to update. Changes reflect instantly in both the database and the CSV file.</p>
         <button onclick="loadInventory()">Refresh Inventory List</button>
         <table>
             <thead>
@@ -157,64 +164,29 @@
     </div>
 
     <div id="npcs" class="tab-content">
-        <h2>NPC Management & Dispositions</h2>
-        <p>Edit fields directly and click save on the row to update. Click headers to sort. Click Faction rows to collapse/expand.</p>
+        <h2>NPC Database (Auto-Syncs with npcs.csv)</h2>
+        <p>Edit fields directly and click save on the row to update. Changes reflect instantly in both the database and the CSV file.</p>
         <button onclick="loadNpcs()">Refresh NPC List</button>
         <div id="npc-container" style="margin-top: 20px; overflow-x: auto;"></div>
     </div>
 
     <div id="ledger" class="tab-content">
         <h2>Ledger & Expenses</h2>
-        <p><em>Daily staff wages are automatically processed when you click "Save Day".</em></p>
-        
         <div style="display:flex; gap: 20px;">
             <div style="flex:1;">
                 <h3>Add New Entry</h3>
-                <div class="form-group">
-                    <label>Type:</label>
-                    <select id="ledger_type">
-                        <option value="Income">Income / Windfall</option>
-                        <option value="Expense">General Expense</option>
-                        <option value="Guild">Guild Contracts</option>
-                        <option value="Renovation">Renovation</option>
-                        <option value="PettyCash">Petty Cash</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Description:</label>
-                    <input type="text" id="ledger_desc">
-                </div>
-                <div class="form-group">
-                    <label>Amount (gp):</label>
-                    <input type="number" id="ledger_amount" value="0.0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>Frequency (For records):</label>
-                    <select id="ledger_freq">
-                        <option value="Once">One-Time</option>
-                        <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                    </select>
-                </div>
+                <div class="form-group"><label>Type:</label><select id="ledger_type"><option value="Income">Income / Windfall</option><option value="Expense">General Expense</option><option value="Guild">Guild Contracts</option><option value="Renovation">Renovation</option><option value="PettyCash">Petty Cash</option></select></div>
+                <div class="form-group"><label>Description:</label><input type="text" id="ledger_desc"></div>
+                <div class="form-group"><label>Amount (gp):</label><input type="number" id="ledger_amount" value="0.0" step="0.1"></div>
+                <div class="form-group"><label>Frequency (For records):</label><select id="ledger_freq"><option value="Once">One-Time</option><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option></select></div>
                 <button onclick="submitLedger()">Record Entry</button>
             </div>
-            
             <div style="flex:2;">
                 <h3>Ledger History</h3>
                 <button onclick="loadLedger()">Refresh Ledger</button>
                 <table style="font-size: 14px;">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th>Amount (gp)</th>
-                            <th>Freq</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ledger-table-body">
-                    </tbody>
+                    <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount (gp)</th><th>Freq</th></tr></thead>
+                    <tbody id="ledger-table-body"></tbody>
                 </table>
             </div>
         </div>

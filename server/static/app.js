@@ -105,34 +105,43 @@ async function rollOutcome() {
     const data = await response.json();
     
     document.getElementById('outcome-result').style.display = 'block';
-    document.getElementById('out-title').innerText = `Simulation Roll: ${data.total_roll}`;
-    document.getElementById('out-desc').innerText = data.outcome;
     
     pendingAutoSales = data.auto_sales;
     
-    let salesHtml = "<strong>Total Sales (Simulated across all hours):</strong><ul>";
-    pendingAutoSales.forEach(s => {
-        salesHtml += `<li>Served ${s.quantity} total patrons. Gross Revenue: <span style="color:#28a745; font-weight:bold;">${s.total_price.toFixed(2)} gp</span></li>`;
-    });
+    let salesHtml = "<ul style='padding-left: 20px; font-size: 14px;'>";
+    if (pendingAutoSales.length === 0) {
+        salesHtml += "<li>No items sold.</li>";
+    } else {
+        pendingAutoSales.forEach(s => {
+            salesHtml += `<li><strong>${s.quantity}x</strong> ${s.item_name} <span style="color:#28a745; float:right;">+${s.total_price.toFixed(2)} gp</span></li>`;
+        });
+    }
     salesHtml += "</ul>";
     document.getElementById('out-sales').innerHTML = salesHtml;
 
-    let hourlyHtml = "";
-    data.hourly_breakdown.forEach(h => {
-        let brawlText = h.brawls > 0 ? "<span style='color:red;font-weight:bold;'>BRAWL!</span>" : "Clear";
-        hourlyHtml += `
-            <tr>
-                <td><strong>${h.hour}</strong></td>
-                <td>+${h.arrivals}</td>
-                <td>${h.table_used}</td>
-                <td>${h.bar_used}</td>
-                <td>${h.vip_used}</td>
-                <td>${h.stand_used}</td>
-                <td>${brawlText}</td>
-            </tr>
+    let receiptsHtml = "";
+    data.receipts.forEach(r => {
+        receiptsHtml += `
+            <div class="receipt-card">
+                <h4>${r.name}</h4>
+                <div style="font-size:11px; color:#aaa; margin-bottom: 8px;">
+                    Lifestyle: ${r.lifestyle} | Seating: ${r.seat} | Arrived: ${r.hour}
+                </div>
+        `;
+        r.items.forEach(item => {
+            receiptsHtml += `
+                <div class="receipt-item">
+                    <span>${item.qty}x ${item.name}</span>
+                    <span>${item.price.toFixed(2)} gp</span>
+                </div>
+            `;
+        });
+        receiptsHtml += `
+                <div class="receipt-total">Total: ${r.total.toFixed(2)} gp</div>
+            </div>
         `;
     });
-    document.getElementById('out-hourly').innerHTML = hourlyHtml;
+    document.getElementById('out-receipts').innerHTML = receiptsHtml;
 }
 
 async function saveDay() {
@@ -149,10 +158,10 @@ async function saveDay() {
     });
 
     if(response.ok) {
-        alert(`Day ${dateStr} saved successfully! Sales and Daily Wages recorded.`);
+        alert(`Day ${dateStr} saved! Inventory deducted and CSVs synced.`);
         pendingAutoSales = [];
-        document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger.</em>";
-        document.getElementById('out-hourly').innerHTML = "";
+        document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger. Inventory deducted.</em>";
+        document.getElementById('out-receipts').innerHTML = "";
     }
 }
 
@@ -170,7 +179,7 @@ async function loadInventory() {
             <td><input class="editable-input" type="number" id="inv_order_${item._id}" value="${item.stock_on_order}"></td>
             <td><input class="editable-input" type="number" id="inv_per_${item._id}" value="${item.units_per}"></td>
             <td><input class="editable-input" type="number" id="inv_price_${item._id}" value="${item.unit_price}" step="0.1"></td>
-            <td><button onclick="updateInventoryItem('${item._id}')">Save</button></td>
+            <td><button onclick="updateInventoryItem('${item._id}')">Save & Sync CSV</button></td>
         `;
         tbody.appendChild(tr);
     });
@@ -185,6 +194,7 @@ async function updateInventoryItem(id) {
         unit_price: parseFloat(document.getElementById(`inv_price_${id}`).value)
     };
     await fetch(`${API_URL}/inventory/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    alert("Inventory Updated and inventory.csv Synced!");
 }
 
 async function loadStaff() {
@@ -192,7 +202,6 @@ async function loadStaff() {
     const data = await response.json();
     const tbody = document.getElementById('staff-table-body');
     tbody.innerHTML = "";
-    
     data.forEach(s => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${s.name}</td><td>${s.wage} gp</td><td>${s.frequency}</td><td>+${s.bonus}</td>`;
@@ -216,7 +225,6 @@ async function loadLedger() {
     const data = await response.json();
     const tbody = document.getElementById('ledger-table-body');
     tbody.innerHTML = "";
-    
     data.reverse().forEach(l => {
         const isIncome = l.entry_type === "Income";
         const amountClass = isIncome ? "income-text" : "expense-text";
@@ -333,7 +341,7 @@ function renderNpcs() {
                         <td><input class="editable-input" type="number" id="npc_party_${npc._id}" value="${npc.party_disposition || 0}" style="width:100%;"></td>
                         <td><input class="editable-input" type="text" id="npc_story_${npc._id}" value="${npc.story_connection || ''}"></td>
                         <td><input class="editable-input" type="text" id="npc_pc_${npc._id}" value="${npc.pc_affiliation || ''}"></td>
-                        <td><button onclick="updateNpcItem('${npc._id}')">Save</button></td>
+                        <td><button onclick="updateNpcItem('${npc._id}')">Save & Sync CSV</button></td>
                     </tr>
                 `;
             });
@@ -367,7 +375,7 @@ async function updateNpcItem(id) {
     });
 
     if(response.ok) {
-        alert("NPC updated.");
+        alert("NPC Updated and npcs.csv Synced!");
         const idx = npcData.findIndex(n => n._id === id);
         if (idx > -1) { npcData[idx] = { ...npcData[idx], ...payload, _id: id }; }
         renderNpcs();
@@ -376,5 +384,4 @@ async function updateNpcItem(id) {
 
 window.onload = function() {
     updateDateDisplay();
-    loadInventory();
 };
