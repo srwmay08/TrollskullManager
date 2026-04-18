@@ -1,4 +1,5 @@
 import random
+import csv
 from fastapi import APIRouter
 from models import RollRequest
 from models import SaveDayRequest
@@ -7,15 +8,34 @@ from database import gc
 from database import sales_sheet
 from database import ledger_sheet
 
-# Import the sync function from the inventory router
-from routers.inventory import sync_inventory_to_csv
-
 router = APIRouter()
+
+
+def get_fallback_npcs():
+    """Failsafe: If the MongoDB collection is empty, read directly from the CSV."""
+    fallback = []
+    try:
+        with open("npcs.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                fallback.append({
+                    "first_name": row.get("First Name", ""),
+                    "last_name": row.get("Last Name", ""),
+                    "lifestyle": row.get("Lifestyle", "Modest"),
+                })
+    except Exception as e:
+        print(f"Fallback CSV read failed: {e}")
+        
+    if not fallback:
+        # Absolute failsafe if CSV is missing
+        fallback = [{"first_name": "Mysterious", "last_name": "Stranger", "lifestyle": "Modest"}]
+    return fallback
+
 
 @router.post("/api/roll")
 def simulate_tavern_day(request: RollRequest):
     if request.is_closed:
-        return {"total_roll": 0, "auto_sales": [], "receipts": [], "hourly_feedback": {}, "is_closed": True}
+        return {"total_roll": 0, "auto_sales": [], "receipts": [], "hourly_feedback": {}, "total_gross": 0.0, "total_profit": 0.0, "is_closed": True}
 
     staff_cursor = db.staff.find()
     total_staff_bonus = sum(staff.get("bonus", 0) for staff in staff_cursor)
@@ -62,6 +82,9 @@ def simulate_tavern_day(request: RollRequest):
         allowed_lifestyles = ["Wealthy", "Aristocratic"]
 
     all_npcs = list(db.npcs.find())
+    if not all_npcs:
+        all_npcs = get_fallback_npcs()
+        
     valid_npcs = [npc for npc in all_npcs if npc.get("lifestyle", "Modest") in allowed_lifestyles]
     if not valid_npcs:
         valid_npcs = all_npcs 
@@ -78,6 +101,9 @@ def simulate_tavern_day(request: RollRequest):
     customer_receipts = []
     consolidated_sales = {}
     hourly_feedback = {}
+    
+    total_gross_sales = 0.0
+    total_cost_of_goods = 0.0
 
     for current_hour_idx, hr_val in enumerate(hours_range):
         hr_label = f"{hr_val}:00"
@@ -102,13 +128,13 @@ def simulate_tavern_day(request: RollRequest):
             affordable_items = []
             
             if lifestyle in ["Squalid", "Poor"]:
-                affordable_items = [i for i in available_items if (i["sell_price_copper"] / 100.0) <= 0.5]
+                affordable_items = [i for i in available_items if (i.get("sell_price_copper", 0) / 100.0) <= 0.5]
             elif lifestyle == "Modest":
-                affordable_items = [i for i in available_items if 0.1 <= (i["sell_price_copper"] / 100.0) <= 2.0]
+                affordable_items = [i for i in available_items if 0.1 <= (i.get("sell_price_copper", 0) / 100.0) <= 2.0]
             elif lifestyle == "Comfortable":
-                affordable_items = [i for i in available_items if 1.0 <= (i["sell_price_copper"] / 100.0) <= 10.0]
+                affordable_items = [i for i in available_items if 1.0 <= (i.get("sell_price_copper", 0) / 100.0) <= 10.0]
             else: 
-                affordable_items = [i for i in available_items if (i["sell_price_copper"] / 100.0) >= 5.0]
+                affordable_items = [i for i in available_items if (i.get("sell_price_copper", 0) / 100.0) >= 5.0]
 
             if not affordable_items and available_items:
                 affordable_items = available_items
@@ -123,9 +149,15 @@ def simulate_tavern_day(request: RollRequest):
                     qty = 1
                     if chosen_item["stock_unit_quantity"] >= qty:
                         chosen_item["stock_unit_quantity"] -= qty
-                        price_in_gp = (chosen_item["sell_price_copper"] / 100.0)
+                        
+                        price_in_gp = (chosen_item.get("sell_price_copper", 0) / 100.0)
+                        cost_in_gp = (chosen_item.get("cost_per_item_copper", 0) / 100.0)
+                        
                         receipt_items.append({"name": chosen_item["item_name"], "qty": qty, "price": price_in_gp * qty})
                         receipt_total += (price_in_gp * qty)
+                        
+                        total_gross_sales += (price_in_gp * qty)
+                        total_cost_of_goods += (cost_in_gp * qty)
                         
                         if chosen_item["item_name"] not in consolidated_sales:
                             consolidated_sales[chosen_item["item_name"]] = {"qty": 0, "total": 0.0, "id": str(chosen_item["_id"])}
@@ -149,7 +181,17 @@ def simulate_tavern_day(request: RollRequest):
     for item_name, data in consolidated_sales.items():
         final_auto_sales.append({"item_name": item_name, "quantity": data["qty"], "total_price": data["total"], "inv_id": data["id"]})
 
-    return {"total_roll": total_roll, "auto_sales": final_auto_sales, "receipts": customer_receipts, "hourly_feedback": hourly_feedback, "is_closed": False}
+    total_profit = total_gross_sales - total_cost_of_goods
+
+    return {
+        "total_roll": total_roll, 
+        "auto_sales": final_auto_sales, 
+        "receipts": customer_receipts, 
+        "hourly_feedback": hourly_feedback, 
+        "total_gross": round(total_gross_sales, 2),
+        "total_profit": round(total_profit, 2),
+        "is_closed": False
+    }
 
 
 @router.post("/api/save_day")
@@ -189,5 +231,8 @@ def save_day_data(request: SaveDayRequest):
             db.ledger.insert_one({"entry_type": "Expense", "description": desc, "amount": total_order_cost_gp, "frequency": "Once", "entry_date": date_str})
             restock_messages.append(f"{desc} (Cost: {total_order_cost_gp} gp)")
 
+    # Deferred import: Solves load order crashing on startup
+    from routers.inventory import sync_inventory_to_csv
     sync_inventory_to_csv()
+    
     return {"status": "Day Saved Successfully", "restocks": restock_messages}

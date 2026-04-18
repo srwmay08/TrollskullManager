@@ -16,6 +16,15 @@
             background-color: rgba(255, 255, 255, 0.15);
             outline: 1px solid #d7ba7d;
         }
+        .summary-box {
+            background-color: #111;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .summary-box h4 { margin-top: 0; margin-bottom: 5px; color: #aaa;}
+        .summary-box .value { font-size: 24px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -70,14 +79,32 @@
         <div id="outcome-result" style="margin-top: 20px; padding: 15px; background-color: #222; display: none; border: 1px solid #444;">
             <h2 id="out-title" style="margin-top: 0; color: #d7ba7d;">Simulation Results</h2>
             <div style="display: flex; gap: 20px;">
+                
                 <div style="flex: 1;">
-                    <h3>Daily Item Sales</h3>
-                    <div id="out-sales"></div>
+                    <h3>Financial Summary</h3>
+                    <div class="summary-box">
+                        <h4>Gross Sales</h4>
+                        <div class="value income-text" id="out-gross">0.00 gp</div>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Net Profit (Gross - Cost)</h4>
+                        <div class="value" id="out-profit">0.00 gp</div>
+                    </div>
+                    
+                    <h3>Items Depleted</h3>
+                    <div id="out-sales" style="background: #111; padding: 10px; border: 1px solid #333;"></div>
                 </div>
+
                 <div style="flex: 1;">
                     <h3>Hourly NPC Presence</h3>
-                    <div id="out-npc-hourly" style="max-height: 400px; overflow-y: auto; background: #111; padding: 10px; border: 1px solid #333;"></div>
+                    <div id="out-npc-hourly" style="height: 500px; overflow-y: auto; background: #111; padding: 10px; border: 1px solid #333;"></div>
                 </div>
+
+                <div style="flex: 1.5;">
+                    <h3>Customer Receipts</h3>
+                    <div id="out-receipts" style="height: 500px; overflow-y: auto; background: #2a2a2a; padding: 10px; border: 1px solid #333;"></div>
+                </div>
+
             </div>
         </div>
     </div>

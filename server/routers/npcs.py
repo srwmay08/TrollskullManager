@@ -1,10 +1,12 @@
 import csv
 from fastapi import APIRouter
 from bson.objectid import ObjectId
+
 from models import NpcItem
 from database import db
 
 router = APIRouter()
+
 
 def sync_npcs_to_csv() -> None:
     items = list(db.npcs.find({}, {"_id": 0}))
@@ -30,6 +32,7 @@ def sync_npcs_to_csv() -> None:
                 "PC Affiliation": item.get("pc_affiliation", "")
             })
 
+
 @router.get("/api/npcs")
 def get_npcs():
     npc_cursor = db.npcs.find()
@@ -38,6 +41,7 @@ def get_npcs():
         item["_id"] = str(item["_id"])
         npc_list.append(item)
     return npc_list
+
 
 @router.put("/api/npcs/{item_id}")
 def update_npc(item_id: str, item: NpcItem):
