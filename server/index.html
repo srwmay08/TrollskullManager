@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trollskull Tavern Management</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
 
@@ -30,7 +30,6 @@
 
     <div id="dashboard" class="tab-content active-tab">
         <h2>Tavern Status & Operations</h2>
-        
         <div class="form-group">
             <label>Base Roll (d100):</label>
             <input type="number" id="base_roll" value="50">
@@ -79,7 +78,6 @@
             </div>
             
             <h3 style="margin-top:20px;">Daily Tavern Ledger (Items Sold to Patrons)</h3>
-            <p style="font-size:0.85em; color:#aaa;">This exact list is deducted from Inventory stock when you "Save Day".</p>
             <div class="auto-sales-list" id="out-sales"></div>
 
             <h3 style="margin-top: 20px;">Detailed Group Receipts</h3>
@@ -87,8 +85,7 @@
             
             <h3 style="margin-top: 20px;">Hourly Breakdown (Click to Expand)</h3>
             <table style="width: 100%; margin-top: 10px;">
-                <tbody id="out-npc-hourly">
-                </tbody>
+                <tbody id="out-npc-hourly"></tbody>
             </table>
         </div>
     </div>
@@ -115,35 +112,72 @@
         <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
             <h3>Add New Inventory Item</h3>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;"><label>Category:</label><input type="text" id="new_inv_cat" value="Uncategorized"></div>
-                <div class="form-group" style="flex:2;"><label>Item Name:</label><input type="text" id="new_inv_name"></div>
-                <div class="form-group" style="flex:1;"><label>Order Unit:</label><input type="text" id="new_inv_unit" value="Unit"></div>
-                <div class="form-group" style="flex:1;"><label>Order Qty:</label><input type="number" id="new_inv_order_qty" value="1"></div>
-                <div class="form-group" style="flex:1;"><label>Unit Cost (cp):</label><input type="number" id="new_inv_cost" value="0"></div>
+                <div class="form-group" style="flex:1;">
+                    <label>Category:</label>
+                    <input type="text" id="new_inv_cat" value="Uncategorized">
+                </div>
+                <div class="form-group" style="flex:2;">
+                    <label>Item Name:</label>
+                    <input type="text" id="new_inv_name">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Order Unit:</label>
+                    <input type="text" id="new_inv_unit" value="Unit">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Order Qty:</label>
+                    <input type="number" id="new_inv_order_qty" value="1">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Unit Cost (cp):</label>
+                    <input type="number" id="new_inv_cost" value="0">
+                </div>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;"><label>Qty per Unit:</label><input type="number" id="new_inv_qty_per" value="1"></div>
-                <div class="form-group" style="flex:1;"><label>Serve Size:</label><input type="text" id="new_inv_serve" value="Standard"></div>
-                <div class="form-group" style="flex:1;"><label>Sell Price (cp):</label><input type="number" id="new_inv_sell" value="0"></div>
-                <div class="form-group" style="flex:1;"><label>Initial Stock:</label><input type="number" id="new_inv_stock" value="0"></div>
-                <div class="form-group" style="flex:1;"><label>Reorder Level:</label><input type="number" id="new_inv_reorder_lvl" value="0"></div>
-                <div class="form-group" style="flex:1;"><label>Reorder Qty:</label><input type="number" id="new_inv_reorder_qty" value="0"></div>
+                <div class="form-group" style="flex:1;">
+                    <label>Qty per Unit:</label>
+                    <input type="number" id="new_inv_qty_per" value="1">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Serve Size:</label>
+                    <input type="text" id="new_inv_serve" value="Standard">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Sell Price (cp):</label>
+                    <input type="number" id="new_inv_sell" value="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Initial Stock:</label>
+                    <input type="number" id="new_inv_stock" value="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Reorder Level:</label>
+                    <input type="number" id="new_inv_reorder_lvl" value="0">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Reorder Qty:</label>
+                    <input type="number" id="new_inv_reorder_qty" value="0">
+                </div>
             </div>
             <button onclick="addInventory()">Add Item</button>
         </div>
 
-        <p>Edit fields directly and click save on the row to update. <strong>Saving a Day will automatically subtract sold items from Stock on Hand!</strong></p>
         <button onclick="loadInventory()">Refresh Inventory List</button>
         <div id="inventory-container" style="overflow-x: auto; margin-top: 15px;"></div>
     </div>
 
     <div id="staff" class="tab-content">
         <h2>Tavern Staff & Guilds</h2>
-        
         <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
             <h3>Hire New Staff</h3>
-            <div class="form-group"><label>Name:</label><input type="text" id="staff_name"></div>
-            <div class="form-group"><label>Wage Amount (gp):</label><input type="number" id="staff_wage" value="0.0" step="0.1"></div>
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" id="staff_name">
+            </div>
+            <div class="form-group">
+                <label>Wage Amount (gp):</label>
+                <input type="number" id="staff_wage" value="0.0" step="0.1">
+            </div>
             <div class="form-group">
                 <label>Payment Frequency:</label>
                 <select id="staff_freq">
@@ -152,10 +186,12 @@
                     <option value="Monthly">Monthly</option>
                 </select>
             </div>
-            <div class="form-group"><label>Tavern Bonus (+ to roll):</label><input type="number" id="staff_bonus" value="0"></div>
+            <div class="form-group">
+                <label>Tavern Bonus (+ to roll):</label>
+                <input type="number" id="staff_bonus" value="0">
+            </div>
             <button onclick="addStaff()">Hire Staff</button>
         </div>
-
         <button onclick="loadStaff()">Refresh Staff Roster</button>
         <table>
             <thead>
@@ -167,8 +203,7 @@
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody id="staff-table-body">
-            </tbody>
+            <tbody id="staff-table-body"></tbody>
         </table>
     </div>
 
@@ -188,8 +223,14 @@
                         <option value="Tuition">Tuition</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Description:</label><input type="text" id="ledger_desc"></div>
-                <div class="form-group"><label>Amount (gp):</label><input type="number" id="ledger_amount" value="0.0" step="0.1"></div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <input type="text" id="ledger_desc">
+                </div>
+                <div class="form-group">
+                    <label>Amount (gp):</label>
+                    <input type="number" id="ledger_amount" value="0.0" step="0.1">
+                </div>
                 <div class="form-group">
                     <label>Frequency:</label>
                     <select id="ledger_freq">
@@ -201,7 +242,6 @@
                 </div>
                 <button onclick="submitLedger()">Record Entry</button>
             </div>
-            
             <div style="flex:2;">
                 <button onclick="loadLedger()">Refresh Ledger History</button>
                 <table style="font-size: 14px;">
@@ -215,8 +255,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody id="ledger-table-body">
-                    </tbody>
+                    <tbody id="ledger-table-body"></tbody>
                 </table>
             </div>
         </div>
@@ -225,7 +264,6 @@
     <div id="npcs" class="tab-content">
         <h2>NPC Directory</h2>
         <button onclick="loadNpcs()">Refresh NPC List</button>
-        <p style="font-size:12px; color:#aaa;">Click table headers to sort. Edit fields and click Save.</p>
         <div id="npc-container" style="overflow-x: auto; margin-top: 15px;"></div>
     </div>
 
@@ -235,6 +273,6 @@
         <div id="report-output" style="margin-top: 20px;"></div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=2"></script>
 </body>
 </html>

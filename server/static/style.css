@@ -256,3 +256,20 @@ th:hover {
     font-size: 13px;
     margin-top: 5px;
 }
+
+.bg-cost { 
+    background-color: #3a2525; 
+}
+
+.bg-stock { 
+    background-color: #1d3547; 
+}
+
+.bg-revenue { 
+    background-color: #1c3d28; 
+}
+
+.small-input { 
+    width: 70px; 
+    text-align: center; 
+}
