@@ -161,6 +161,13 @@ th {
     margin-top: 10px;
 }
 
+.hourly-patrons-list {
+    background-color: #1e1e1e;
+    padding: 10px;
+    border-left: 4px solid #d7ba7d;
+    margin-top: 15px;
+}
+
 .income-text {
     color: #28a745;
     font-weight: bold;

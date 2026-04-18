@@ -46,6 +46,14 @@ async function rollOutcome() {
     }
     salesHtml += "</ul>";
     document.getElementById('out-sales').innerHTML = salesHtml;
+
+    let hourlyHtml = "<strong>Hourly Patron Arrivals (From NPC Database):</strong><ul style='list-style-type: none; padding: 0;'>";
+    data.hourly_breakdown.forEach(h => {
+        let patronNames = h.patrons.length > 0 ? h.patrons.join(", ") : "None";
+        hourlyHtml += `<li><strong style="color:#d7ba7d;">${h.hour}:</strong> ${patronNames}</li>`;
+    });
+    hourlyHtml += "</ul>";
+    document.getElementById('out-hourly').innerHTML = hourlyHtml;
 }
 
 async function saveDay() {
@@ -71,28 +79,7 @@ async function saveDay() {
         alert(`Day ${dateStr} saved successfully! Sales and Daily Wages recorded.`);
         pendingAutoSales = [];
         document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger.</em>";
-    }
-}
-
-async function submitManualSale() {
-    const dateStr = document.getElementById('global_date').value;
-    const payload = {
-        item_name: document.getElementById('sale_item').value,
-        quantity: parseInt(document.getElementById('sale_qty').value),
-        total_price: parseFloat(document.getElementById('sale_price').value),
-        sale_date: dateStr
-    };
-
-    const response = await fetch(`${API_URL}/sales`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if(response.ok) {
-        alert("Manual sale recorded.");
-        document.getElementById('sale_item').value = "";
-        document.getElementById('sale_price').value = "0.0";
+        document.getElementById('out-hourly').innerHTML = "<em>Tavern is now closed for the day.</em>";
     }
 }
 

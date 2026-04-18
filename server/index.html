@@ -19,7 +19,6 @@
 
     <nav>
         <button onclick="switchTab('dashboard')">DASHBOARD</button>
-        <button onclick="switchTab('sales')">SALES (Manual)</button>
         <button onclick="switchTab('inventory')">INVENTORY</button>
         <button onclick="switchTab('staff')">STAFF</button>
         <button onclick="switchTab('ledger')">LEDGER</button>
@@ -64,24 +63,8 @@
             <p><strong>Main Floor Patrons:</strong> <span id="out-main"></span>/54</p>
             <p><strong>VIP Patrons:</strong> <span id="out-vip"></span>/10</p>
             <div class="auto-sales-list" id="out-sales"></div>
+            <div class="hourly-patrons-list" id="out-hourly"></div>
         </div>
-    </div>
-
-    <div id="sales" class="tab-content">
-        <h2>Record a Manual Sale</h2>
-        <div class="form-group">
-            <label>Item Name:</label>
-            <input type="text" id="sale_item">
-        </div>
-        <div class="form-group">
-            <label>Quantity:</label>
-            <input type="number" id="sale_qty" value="1">
-        </div>
-        <div class="form-group">
-            <label>Total Price (gp):</label>
-            <input type="number" id="sale_price" value="0.0" step="0.1">
-        </div>
-        <button onclick="submitManualSale()">Record Sale</button>
     </div>
 
     <div id="inventory" class="tab-content">

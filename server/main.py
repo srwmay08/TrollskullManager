@@ -1,5 +1,7 @@
 import contextlib
 import uvicorn
+import csv
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -7,6 +9,12 @@ from fastapi.staticfiles import StaticFiles
 
 from database import db
 from routers import router
+
+def parse_int(val):
+    try:
+        return int(val)
+    except Exception:
+        return 0
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -157,6 +165,25 @@ async def lifespan(app: FastAPI):
             }
         ]
         db.ledger.insert_many(seed_ledger)
+
+    if db.npcs.count_documents({}) == 0:
+        if os.path.exists("npcs.csv"):
+            npc_list = []
+            with open("npcs.csv", mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    npc_list.append({
+                        "last_name": row.get("Last Name", ""),
+                        "first_name": row.get("First Name", ""),
+                        "type": row.get("Type", ""),
+                        "lifestyle": row.get("Lifestyle", ""),
+                        "affiliation": row.get("Affiliation", ""),
+                        "age": parse_int(row.get("Age", "")),
+                        "bar_disposition": parse_int(row.get("Bar Disposition", "")),
+                        "party_disposition": parse_int(row.get("Party Disposition", ""))
+                    })
+            if npc_list:
+                db.npcs.insert_many(npc_list)
         
     print("\n" + "="*50)
     print("TROLLSKULL MANOR SERVER IS RUNNING")

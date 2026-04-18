@@ -51,9 +51,48 @@ def calculate_tavern_outcome(request: RollRequest):
             vip_fullness = random.randint(1, 100)
             vip_patrons = max(1, int((vip_fullness / 100.0) * 10))
 
-    ale_qty = int(patrons * random.uniform(1.0, 2.5))
-    food_qty = int(patrons * random.uniform(0.2, 0.8))
-    premium_qty = int(vip_patrons * random.uniform(2.0, 4.0))
+    friendly_npcs = list(db.npcs.find({"bar_disposition": {"$gt": 0}}))
+    neutral_npcs = list(db.npcs.find({"bar_disposition": 0}))
+    
+    daily_npcs = []
+    total_visitors = patrons + vip_patrons
+    for _ in range(total_visitors):
+        if friendly_npcs and random.random() < 0.8:
+            daily_npcs.append(random.choice(friendly_npcs))
+        elif neutral_npcs:
+            daily_npcs.append(random.choice(neutral_npcs))
+
+    hours = ["12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM"]
+    hour_assignments = {h: [] for h in hours}
+    
+    for npc in daily_npcs:
+        arrive_hour = random.choice(hours)
+        name = f"{npc.get('first_name', '')} {npc.get('last_name', '')}".strip()
+        if not name:
+            name = "Unknown Patron"
+        hour_assignments[arrive_hour].append(name)
+
+    hourly_breakdown = []
+    for h in hours:
+        hourly_breakdown.append({"hour": h, "patrons": hour_assignments[h]})
+
+    ale_qty = 0
+    food_qty = 0
+    premium_qty = 0
+
+    for npc in daily_npcs:
+        lifestyle = npc.get("lifestyle", "Modest")
+        if lifestyle == "Wealthy":
+            premium_qty += random.randint(1, 3)
+            food_qty += random.randint(0, 1)
+        elif lifestyle == "Comfortable":
+            ale_qty += random.randint(1, 2)
+            food_qty += random.randint(0, 1)
+            premium_qty += random.randint(0, 1)
+        else:
+            ale_qty += random.randint(1, 3)
+            if random.random() > 0.5:
+                food_qty += 1
 
     generated_sales = []
     if ale_qty > 0:
@@ -69,7 +108,8 @@ def calculate_tavern_outcome(request: RollRequest):
         "outcome": outcome,
         "main_patrons": patrons,
         "vip_patrons": vip_patrons,
-        "auto_sales": generated_sales
+        "auto_sales": generated_sales,
+        "hourly_breakdown": hourly_breakdown
     }
     return result
 
@@ -101,18 +141,6 @@ def save_day_data(request: SaveDayRequest):
                 ledger_sheet.append_row(row)
 
     return {"status": "Day Saved Successfully"}
-
-@router.post("/api/sales")
-def record_sale(sale: SaleItem):
-    sale_dict = sale.dict()
-    db.sales.insert_one(sale_dict)
-    
-    if gc is not None:
-        row = [sale.sale_date, sale.item_name, sale.quantity, sale.total_price]
-        sales_sheet.append_row(row)
-        
-    sale_dict["_id"] = str(sale_dict["_id"])
-    return sale_dict
 
 @router.get("/api/inventory")
 def get_inventory():
