@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List
 from typing import Optional
 
+
 class HarptosState(BaseModel):
     month: int
     day: int
@@ -10,12 +11,17 @@ class HarptosState(BaseModel):
     holiday_name: Optional[str] = None
     is_shieldmeet: bool = False
 
+
 class RollRequest(BaseModel):
     base_roll: int
     renown_bonus: int
     environmental_bonus: int
     current_date: Optional[HarptosState] = None
     price_strategy: str = "Standard"
+    open_hour: int = 12
+    close_hour: int = 24
+    is_closed: bool = False
+
 
 class SaleItem(BaseModel):
     item_name: str
@@ -23,9 +29,10 @@ class SaleItem(BaseModel):
     total_price: float
     sale_date: str
 
+
 class InventoryItem(BaseModel):
-    item_name: str
     category: str
+    item_name: str
     order_unit: str
     order_quantity: int
     unit_cost_copper: float
@@ -39,6 +46,7 @@ class InventoryItem(BaseModel):
     status: str
     reorder_quantity: int
 
+
 class LedgerEntry(BaseModel):
     entry_type: str
     description: str
@@ -46,15 +54,19 @@ class LedgerEntry(BaseModel):
     frequency: str
     entry_date: str
 
+
 class StaffItem(BaseModel):
     name: str
     wage: float
     frequency: str
     bonus: int
 
+
 class SaveDayRequest(BaseModel):
     calendar_date: str
     sales: List[SaleItem]
+    is_closed: bool = False
+
 
 class NpcItem(BaseModel):
     first_name: str

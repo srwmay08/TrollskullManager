@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trollskull Tavern Management</title>
     <link rel="stylesheet" href="/static/style.css?v=2">
+    <style>
+        table td[contenteditable="true"] {
+            cursor: text;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid #444;
+            transition: background-color 0.2s;
+        }
+        table td[contenteditable="true"]:focus {
+            background-color: rgba(255, 255, 255, 0.15);
+            outline: 1px solid #d7ba7d;
+        }
+    </style>
 </head>
 <body>
 
@@ -14,265 +26,96 @@
             <label style="margin:0;">Current Date:</label>
             <span style="font-weight: bold; color: #d7ba7d; margin-right: 15px;" id="global_date_display"></span>
             <button class="save-btn" style="background-color: #007acc;" onclick="advanceDate()">Advance Day</button>
-            <button class="save-btn" onclick="saveDay()">Save Day to Ledger & Sales</button>
+            <button class="save-btn" onclick="saveDay()">Save Day to Ledger</button>
         </div>
     </div>
 
     <nav>
         <button onclick="switchTab('dashboard')">DASHBOARD</button>
-        <button onclick="switchTab('sales')">SALES (Manual)</button>
         <button onclick="switchTab('inventory')">INVENTORY</button>
         <button onclick="switchTab('staff')">STAFF</button>
         <button onclick="switchTab('ledger')">LEDGER</button>
         <button onclick="switchTab('npcs')">NPC DIRECTORY</button>
-        <button onclick="switchTab('reports')">REPORTING</button>
+        <button onclick="switchTab('reports')">REPORTS</button>
     </nav>
 
     <div id="dashboard" class="tab-content active-tab">
-        <h2>Tavern Status & Operations</h2>
-        <div class="form-group">
-            <label>Base Roll (d100):</label>
-            <input type="number" id="base_roll" value="50">
+        <div style="display: flex; gap: 20px; background-color: #333; padding: 15px; border-radius: 4px;">
+            <div style="flex: 1;">
+                <h3>Operational Hours (0:00 - 24:00)</h3>
+                <div class="form-group"><label>Open:</label><input type="number" id="open_hour" value="12" min="0" max="23"></div>
+                <div class="form-group"><label>Close:</label><input type="number" id="close_hour" value="24" min="1" max="24"></div>
+                <div class="form-group"><label>Close for Day:</label><input type="checkbox" id="is_closed"></div>
+            </div>
+            <div style="flex: 1;">
+                <h3>Simulation Modifiers</h3>
+                <div class="form-group"><label>Base Roll:</label><input type="number" id="base_roll" value="50"></div>
+                <div class="form-group"><label>Renown:</label><input type="number" id="renown_bonus" value="0"></div>
+                <div class="form-group"><label>Strategy:</label>
+                    <select id="price_strategy">
+                        <option value="Dive">Dive</option>
+                        <option value="Standard" selected>Standard</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Exclusive">Exclusive</option>
+                    </select>
+                </div>
+                <button style="width:100%; font-size: 16px; padding: 10px;" onclick="rollOutcome()">Generate Day</button>
+            </div>
+            <div style="flex: 1;">
+                <h3>Environment</h3>
+                <div class="form-group"><label>Effect Bonus:</label><input type="number" id="env_bonus" value="0"></div>
+            </div>
         </div>
-        <div class="form-group">
-            <label>Renown Bonus (+):</label>
-            <input type="number" id="renown_bonus" value="0">
-        </div>
-        <div class="form-group">
-            <label>Environmental Effects (+):</label>
-            <input type="number" id="env_bonus" value="0">
-        </div>
-        <div class="form-group">
-            <label>Pricing Strategy:</label>
-            <select id="price_strategy">
-                <option value="Dive">Dive (Cheap)</option>
-                <option value="Standard" selected>Standard</option>
-                <option value="Premium">Premium</option>
-                <option value="Exclusive">Exclusive</option>
-            </select>
-        </div>
-        <button onclick="rollOutcome()">Generate Daily Outcome</button>
         
-        <div id="outcome-result" style="margin-top: 20px; padding: 15px; background-color: #333; display: none;">
-            <h3 id="out-title">Result</h3>
-            <p id="out-desc"></p>
-            <p style="font-size:0.9em; color:#aaa;">The totals below represent the unique, total daily patrons assigned to these sections. Expand the hourly breakdown below to view who is physically present at a given hour.</p>
-            
-            <div class="stats-box" style="margin-top:15px;">
-                <div class="stat-card">
-                    <h3>Tables (Daily Total)</h3>
-                    <p id="out-tables">0 / 44</p>
+        <div id="outcome-result" style="margin-top: 20px; padding: 15px; background-color: #222; display: none; border: 1px solid #444;">
+            <h2 id="out-title" style="margin-top: 0; color: #d7ba7d;">Simulation Results</h2>
+            <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <h3>Daily Item Sales</h3>
+                    <div id="out-sales"></div>
                 </div>
-                <div class="stat-card">
-                    <h3>Bar (Daily Total)</h3>
-                    <p id="out-bar">0 / 10</p>
-                </div>
-                <div class="stat-card">
-                    <h3>VIP (Daily Total)</h3>
-                    <p id="out-vip">0 / 10</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Standing Room</h3>
-                    <p id="out-standing">0 / 0</p>
+                <div style="flex: 1;">
+                    <h3>Hourly NPC Presence</h3>
+                    <div id="out-npc-hourly" style="max-height: 400px; overflow-y: auto; background: #111; padding: 10px; border: 1px solid #333;"></div>
                 </div>
             </div>
-            
-            <h3 style="margin-top:20px;">Daily Tavern Ledger (Items Sold to Patrons)</h3>
-            <div class="auto-sales-list" id="out-sales"></div>
-
-            <h3 style="margin-top: 20px;">Detailed Group Receipts</h3>
-            <div id="out-npc-groups"></div>
-            
-            <h3 style="margin-top: 20px;">Hourly Breakdown (Click to Expand)</h3>
-            <table style="width: 100%; margin-top: 10px;">
-                <tbody id="out-npc-hourly"></tbody>
-            </table>
         </div>
-    </div>
-
-    <div id="sales" class="tab-content">
-        <h2>Record a Manual Sale</h2>
-        <div class="form-group">
-            <label>Item Name:</label>
-            <input type="text" id="sale_item">
-        </div>
-        <div class="form-group">
-            <label>Quantity:</label>
-            <input type="number" id="sale_qty" value="1">
-        </div>
-        <div class="form-group">
-            <label>Total Price (gp):</label>
-            <input type="number" id="sale_price" value="0.0" step="0.1">
-        </div>
-        <button onclick="submitManualSale()">Record Sale</button>
     </div>
 
     <div id="inventory" class="tab-content">
-        <h2>Inventory Management</h2>
-        <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
-            <h3>Add New Inventory Item</h3>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;">
-                    <label>Category:</label>
-                    <input type="text" id="new_inv_cat" value="Uncategorized">
-                </div>
-                <div class="form-group" style="flex:2;">
-                    <label>Item Name:</label>
-                    <input type="text" id="new_inv_name">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Order Unit:</label>
-                    <input type="text" id="new_inv_unit" value="Unit">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Order Qty:</label>
-                    <input type="number" id="new_inv_order_qty" value="1">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Unit Cost (cp):</label>
-                    <input type="number" id="new_inv_cost" value="0">
-                </div>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;">
-                    <label>Qty per Unit:</label>
-                    <input type="number" id="new_inv_qty_per" value="1">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Serve Size:</label>
-                    <input type="text" id="new_inv_serve" value="Standard">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Sell Price (cp):</label>
-                    <input type="number" id="new_inv_sell" value="0">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Initial Stock:</label>
-                    <input type="number" id="new_inv_stock" value="0">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Reorder Level:</label>
-                    <input type="number" id="new_inv_reorder_lvl" value="0">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Reorder Qty:</label>
-                    <input type="number" id="new_inv_reorder_qty" value="0">
-                </div>
-            </div>
-            <button onclick="addInventory()">Add Item</button>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Inventory Management</h2>
+            <button onclick="syncInventoryFromCSV()" style="background-color: #d7ba7d; color: #000;">Force Sync from CSV</button>
         </div>
-
-        <button onclick="loadInventory()">Refresh Inventory List</button>
         <div id="inventory-container" style="overflow-x: auto; margin-top: 15px;"></div>
     </div>
 
     <div id="staff" class="tab-content">
-        <h2>Tavern Staff & Guilds</h2>
-        <div style="background-color:#333; padding: 15px; margin-bottom:20px; border-radius:4px;">
-            <h3>Hire New Staff</h3>
-            <div class="form-group">
-                <label>Name:</label>
-                <input type="text" id="staff_name">
-            </div>
-            <div class="form-group">
-                <label>Wage Amount (gp):</label>
-                <input type="number" id="staff_wage" value="0.0" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Payment Frequency:</label>
-                <select id="staff_freq">
-                    <option value="Daily">Daily</option>
-                    <option value="Weekly">Weekly (Tenday)</option>
-                    <option value="Monthly">Monthly</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Tavern Bonus (+ to roll):</label>
-                <input type="number" id="staff_bonus" value="0">
-            </div>
-            <button onclick="addStaff()">Hire Staff</button>
-        </div>
-        <button onclick="loadStaff()">Refresh Staff Roster</button>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Wage (gp)</th>
-                    <th>Frequency</th>
-                    <th>Bonus</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
+        <h2>Tavern Staff</h2>
+        <table style="width: 100%;">
+            <thead><tr><th>Name</th><th>Wage (gp)</th><th>Freq</th><th>Bonus</th><th>Action</th></tr></thead>
             <tbody id="staff-table-body"></tbody>
         </table>
     </div>
 
     <div id="ledger" class="tab-content">
-        <h2>Ledger & Expenses</h2>
-        <div style="display:flex; gap: 20px;">
-            <div style="flex:1; background-color:#333; padding: 15px; border-radius:4px; max-height:400px;">
-                <h3>Add New Entry</h3>
-                <div class="form-group">
-                    <label>Type:</label>
-                    <select id="ledger_type">
-                        <option value="Income">Income / Windfall</option>
-                        <option value="Expense">General Expense</option>
-                        <option value="Guild">Guild Contracts</option>
-                        <option value="Renovation">Renovation</option>
-                        <option value="PettyCash">Petty Cash</option>
-                        <option value="Tuition">Tuition</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Description:</label>
-                    <input type="text" id="ledger_desc">
-                </div>
-                <div class="form-group">
-                    <label>Amount (gp):</label>
-                    <input type="number" id="ledger_amount" value="0.0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label>Frequency:</label>
-                    <select id="ledger_freq">
-                        <option value="Once">One-Time</option>
-                        <option value="Daily">Daily</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                    </select>
-                </div>
-                <button onclick="submitLedger()">Record Entry</button>
-            </div>
-            <div style="flex:2;">
-                <button onclick="loadLedger()">Refresh Ledger History</button>
-                <table style="font-size: 14px;">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th>Amount (gp)</th>
-                            <th>Freq</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ledger-table-body"></tbody>
-                </table>
-            </div>
-        </div>
+        <h2>Ledger History</h2>
+        <table style="width: 100%;">
+            <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Freq</th><th>Action</th></tr></thead>
+            <tbody id="ledger-table-body"></tbody>
+        </table>
     </div>
     
     <div id="npcs" class="tab-content">
         <h2>NPC Directory</h2>
-        <button onclick="loadNpcs()">Refresh NPC List</button>
-        <div id="npc-container" style="overflow-x: auto; margin-top: 15px;"></div>
+        <div id="npc-container" style="overflow-x: auto;"></div>
     </div>
 
-    <div id="reports" class="tab-content">
-        <h2>Business Reporting</h2>
-        <button onclick="loadReports()">Generate Overview Report</button>
-        <div id="report-output" style="margin-top: 20px;"></div>
-    </div>
-
-    <script src="/static/app.js?v=2"></script>
+    <script src="/static/js/globals.js?v=3"></script>
+    <script src="/static/js/inventory.js?v=3"></script>
+    <script src="/static/js/staff.js?v=3"></script>
+    <script src="/static/js/npcs.js?v=3"></script>
+    <script src="/static/js/ledger.js?v=3"></script>
+    <script src="/static/js/dashboard.js?v=3"></script>
 </body>
 </html>

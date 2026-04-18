@@ -1,33 +1,33 @@
 ,,ORDER BY,,,COST PER ITEM,ITEMS / UNIT DETAILS,,SELL PRICE IN COPPER,MARGIN IN COPPER,STOCK UNIT QUANTITY,REORDER LEVEL,STATUS,REORDER QUANTITY
-CATEGORY,ITEM,UNIT,QUANTITY,UNIT COST IN COPPER,,QUANTITY per UNIT,SERVE SIZE,,,,,,
+SERVE SIZE,SERVE SIZE,UNIT,SERVE SIZE,SERVE SIZE,,QUANTITY per UNIT,SERVE SIZE,,,,,,
 ,,,,,,,,,,,,,
-DWARVEN CASK SELECTIONS,Moradin-Anaz,Cask,1,20000,333.3333333,60,Heavy Pour,400,66.66666667,4,1,OK,4
-DWARVEN CASK SELECTIONS,Ironforge Reserve,Cask,1,4600,57.5,80,Standard,80,22.5,4,2,OK,4
-DWARVEN CASK SELECTIONS,Stone-Hearth Malt,Cask,1,2200,27.5,80,Standard,50,22.5,4,2,OK,4
+Heavy Pour,Heavy Pour,Cask,Heavy Pour,Heavy Pour,333.3333333,60,Heavy Pour,400,66.66666667,4,1,OK,4
+Standard,Standard,Cask,Standard,Standard,57.5,80,Standard,80,22.5,4,2,OK,4
+Standard,Standard,Cask,Standard,Standard,27.5,80,Standard,50,22.5,4,2,OK,4
 ,,,,,,,,,,,,,
-HIGH-END ART WINES,First Frost,Case,12,2600,216.6666667,1,Bottle,240,23.33333333,3,1,OK,3
-HIGH-END ART WINES,First Frost,Case,12,2600,43.33333333,5,Glasses,60,16.66666667,,,,
-HIGH-END ART WINES,Azun’s Lament,Case,12,1500,125,1,Bottle,150,25,3,1,OK,3
-HIGH-END ART WINES,Azun’s Lament,Case,12,1500,25,5,Glasses,40,15,,,,
-HIGH-END ART WINES,Silver Spring,Case,12,1200,100,1,Bottle,120,20,3,1,OK,3
-HIGH-END ART WINES,Silver Spring,Case,12,1200,20,5,Glasses,40,20,,,,
-HIGH-END ART WINES,Manycherries Bold,Case,12,500,41.66666667,1,Bottle,100,58.33333333,3,1,OK,3
-HIGH-END ART WINES,Manycherries Bold,Case,12,500,8.333333333,5,Glasses,30,21.66666667,,,,
-HIGH-END ART WINES,Harbor White,Case,12,400,33.33333333,1,Bottle,70,36.66666667,3,1,OK,3
-HIGH-END ART WINES,Harbor White,Case,12,400,6.666666667,5,Glasses,20,13.33333333,,,,
-HIGH-END ART WINES,Pulass,Case,12,500,41.66666667,1,Bottle,100,58.33333333,3,1,OK,3
-HIGH-END ART WINES,Pulass,Case,12,500,8.333333333,5,Glasses,30,21.66666667,,,,
+Bottle,Bottle,Case,Bottle,Bottle,216.6666667,1,Bottle,240,23.33333333,3,1,OK,3
+Glasses,Glasses,Case,Glasses,Glasses,43.33333333,5,Glasses,60,16.66666667,,,,
+Bottle,Bottle,Case,Bottle,Bottle,125,1,Bottle,150,25,3,1,OK,3
+Glasses,Glasses,Case,Glasses,Glasses,25,5,Glasses,40,15,,,,
+Bottle,Bottle,Case,Bottle,Bottle,100,1,Bottle,120,20,3,1,OK,3
+Glasses,Glasses,Case,Glasses,Glasses,20,5,Glasses,40,20,,,,
+Bottle,Bottle,Case,Bottle,Bottle,41.66666667,1,Bottle,100,58.33333333,3,1,OK,3
+Glasses,Glasses,Case,Glasses,Glasses,8.333333333,5,Glasses,30,21.66666667,,,,
+Bottle,Bottle,Case,Bottle,Bottle,33.33333333,1,Bottle,70,36.66666667,3,1,OK,3
+Glasses,Glasses,Case,Glasses,Glasses,6.666666667,5,Glasses,20,13.33333333,,,,
+Bottle,Bottle,Case,Bottle,Bottle,41.66666667,1,Bottle,100,58.33333333,3,1,OK,3
+Glasses,Glasses,Case,Glasses,Glasses,8.333333333,5,Glasses,30,21.66666667,,,,
 ,,,,,,,,,,,,,
-SPECIALTY LIQUORS,Best Old Mintarn,Bottle,4,2400,30,20,Glass,60,30,3,1,OK,3
-SPECIALTY LIQUORS,Wyvern Whiskey,Bottle,4,1900,23.75,20,Glass,50,26.25,3,1,OK,3
-SPECIALTY LIQUORS,Amberjack Whiskey,Bottle,6,1700,14.16666667,20,Glass,40,25.83333333,2,1,OK,2
-SPECIALTY LIQUORS,Waterdhavian Zzar,Bottle,1,600,30,20,Glass,40,10,12,1,OK,12
-SPECIALTY LIQUORS,Lt. Talbot’s Moonshine,Jug,8,800,3.333333333,30,Drink,20,16.66666667,2,1,OK,2
-SPECIALTY LIQUORS,Shadowdale Brandy,Bottle,6,1300,10.83333333,20,Glass,20,9.166666667,2,1,OK,2
-SPECIALTY LIQUORS,Neverwinter Black Icewine,Bottle,12,1200,6.666666667,15,Glass,30,23.33333333,3,1,OK,3
+Glass,Glass,Bottle,Glass,Glass,30,20,Glass,60,30,3,1,OK,3
+Glass,Glass,Bottle,Glass,Glass,23.75,20,Glass,50,26.25,3,1,OK,3
+Glass,Glass,Bottle,Glass,Glass,14.16666667,20,Glass,40,25.83333333,2,1,OK,2
+Glass,Glass,Bottle,Glass,Glass,30,20,Glass,40,10,12,1,OK,12
+Drink,Drink,Jug,Drink,Drink,3.333333333,30,Drink,20,16.66666667,2,1,OK,2
+Glass,Glass,Bottle,Glass,Glass,10.83333333,20,Glass,20,9.166666667,2,1,OK,2
+Glass,Glass,Bottle,Glass,Glass,6.666666667,15,Glass,30,23.33333333,3,1,OK,3
 ,,,,,,,,,,,,,
-"BEERS, ALES & CIDERS","The ""Lif"" Special",Keg,1,300,3,100,Glass,5,2,2,0,OK,2
-"BEERS, ALES & CIDERS",Aftermath Abbey Ale,Keg,1,320,3.2,100,Tankard,5,1.8,2,0,OK,2
-"BEERS, ALES & CIDERS",Hell’s Teeth Cider,Keg,1,500,5,100,Tankard,7,2,2,0,OK,2
-"BEERS, ALES & CIDERS",Black Wyvern Porter,Keg,1,485,4.85,100,Tankard,7,2.15,2,0,OK,2
-"BEERS, ALES & CIDERS",Goat’s Head Ale,Keg,1,505,5.05,100,Tankard,7,1.95,2,0,OK,2
+Glass,Glass,Keg,Glass,Glass,3,100,Glass,5,2,2,0,OK,2
+Tankard,Tankard,Keg,Tankard,Tankard,3.2,100,Tankard,5,1.8,2,0,OK,2
+Tankard,Tankard,Keg,Tankard,Tankard,5,100,Tankard,7,2,2,0,OK,2
+Tankard,Tankard,Keg,Tankard,Tankard,4.85,100,Tankard,7,2.15,2,0,OK,2
+Tankard,Tankard,Keg,Tankard,Tankard,5.05,100,Tankard,7,1.95,2,0,OK,2
