@@ -1,22 +1,22 @@
-Item Name,Stock on Hand,Stock on Order,Units Per,Unit Price
-"Moradin-Anaz (""Moradin's Hammerfall"")",60,0,1,2.0
-Ironforge Reserve,60,0,1,1.0
-Stone-Hearth Malt,60,0,1,0.5
-First Frost,50,0,5,5.0
-Azun's Lament,50,0,5,3.0
-Silver Spring,50,0,5,2.0
-Manycherries Bold,50,0,5,1.0
-Harbor White,50,0,5,0.8
-Pulass,50,0,5,1.0
-Best Old Mintarn Whisky,50,0,1,1.0
-Wyvern Whiskey,50,0,1,0.8
-Amberjack Whiskey,50,0,1,0.6
-Waterdhavian Zzar,50,0,1,0.5
-Lieutenant Talbot's Moonshine,50,0,1,0.4
-Shadowdale Brandy,50,0,1,1.0
-Neverwinter Black Icewine,50,0,1,2.0
-"The ""Lif"" Special",100,0,1,0.8
-Aftermath Abbey Ale,100,0,1,0.1
-Hell's Teeth Cider,100,0,1,0.05
-Black Wyvern Porter,100,0,1,0.04
-Goat's Head Ale,100,0,1,0.03
+Item Name,Units in Stock,Qauntity Per Bottle,Stock on Order,Units Per,Unit Price
+"Moradin-Anaz (""Moradin's Hammerfall"")",3,60,0,1,2.0
+Ironforge Reserve,6,60,0,1,1.0
+Stone-Hearth Malt,10,60,0,1,0.5
+First Frost,4,50,0,5,5.0
+Azun's Lament,4,50,0,5,3.0
+Silver Spring,6,50,0,5,2.0
+Manycherries Bold,6,50,0,5,1.0
+Harbor White,12,50,0,5,0.8
+Pulass,12,50,0,5,1.0
+Best Old Mintarn Whisky,12,50,0,1,1.0
+Wyvern Whiskey,12,50,0,1,0.8
+Amberjack Whiskey,12,50,0,1,0.6
+Waterdhavian Zzar,12,50,0,1,0.5
+Lieutenant Talbot's Moonshine,12,50,0,1,0.4
+Shadowdale Brandy,12,50,0,1,1.0
+Neverwinter Black Icewine,12,50,0,1,2.0
+"The ""Lif"" Special",3,100,0,1,0.8
+Aftermath Abbey Ale,3,100,0,1,0.1
+Hell's Teeth Cider,3,100,0,1,0.05
+Black Wyvern Porter,3,100,0,1,0.04
+Goat's Head Ale,3,100,0,1,0.03
