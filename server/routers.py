@@ -22,20 +22,21 @@ router = APIRouter()
 def sync_inventory_to_csv():
     items = list(db.inventory.find({}, {"_id": 0}))
     if not items: return
-    keys = ["Item Name", "Stock on Hand", "Size per Unit", "Qty per Unit", "Order Cost", "Cost per Item", "Base Stock", "Restock Level", "Sale Price"]
+    keys = ["Item Name", "Category", "Order Unit", "Order Cost", "Qty per Unit", "Cost per Item", "Base Stock", "Restock Level", "Stock on Hand", "Sale Price"]
     with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
         for item in items:
             writer.writerow({
                 "Item Name": item.get("item_name", ""),
-                "Stock on Hand": item.get("stock_on_hand", 0),
-                "Size per Unit": item.get("size_per_unit", ""),
-                "Qty per Unit": item.get("qty_per_unit", 1),
+                "Category": item.get("category", "Uncategorized"),
+                "Order Unit": item.get("order_unit", "Unit"),
                 "Order Cost": item.get("order_cost", 0.0),
+                "Qty per Unit": item.get("qty_per_unit", 1),
                 "Cost per Item": item.get("cost_per_item", 0.0),
                 "Base Stock": item.get("base_stock", 0),
                 "Restock Level": item.get("restock_level", 0),
+                "Stock on Hand": item.get("stock_on_hand", 0),
                 "Sale Price": item.get("unit_price", 0.0)
             })
 
@@ -211,7 +212,6 @@ def simulate_tavern_day(request: RollRequest):
 def save_day_data(request: SaveDayRequest):
     date_str = request.calendar_date
     
-    # 1. Deduct Inventory from Sales
     for sale in request.sales:
         sale_dict = sale.dict()
         db.sales.insert_one(sale_dict)
@@ -227,7 +227,6 @@ def save_day_data(request: SaveDayRequest):
 
     restock_messages = []
 
-    # 2. Automated Reordering Protocol
     all_inventory = list(db.inventory.find())
     for inv in all_inventory:
         current_stock = inv.get("stock_on_hand", 0)
@@ -245,7 +244,7 @@ def save_day_data(request: SaveDayRequest):
             
             db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_on_hand": items_received}})
             
-            desc = f"Auto-Restock: {units_to_order}x {inv.get('size_per_unit', 'Unit')} of {inv['item_name']}"
+            desc = f"Auto-Restock: {units_to_order}x {inv.get('order_unit', 'Unit')} of {inv['item_name']}"
             ledger_entry = {"entry_type": "Expense", "description": desc, "amount": total_order_cost, "frequency": "Once", "entry_date": date_str}
             db.ledger.insert_one(ledger_entry)
             
@@ -257,7 +256,6 @@ def save_day_data(request: SaveDayRequest):
 
     sync_inventory_to_csv()
 
-    # 3. Pay Daily Wages
     daily_staff = db.staff.find({"frequency": "Daily"})
     for staff in daily_staff:
         if staff.get("wage", 0) > 0:

@@ -42,6 +42,28 @@
         .editable-input.small-input {
             width: 65px;
         }
+        
+        .bg-cost { background-color: #6b2424 !important; }
+        .bg-stock { background-color: #1d4b6b !important; }
+        .bg-revenue { background-color: #215934 !important; }
+        .group-header { 
+            text-align: center; 
+            border-bottom: 2px solid #fff !important; 
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .cat-header {
+            background-color: #333; 
+            cursor: pointer; 
+            color: #d7ba7d; 
+            font-weight: bold; 
+            padding: 10px;
+        }
+        .cat-header:hover {
+            background-color: #444;
+        }
     </style>
 </head>
 <body>
@@ -109,28 +131,9 @@
 
     <div id="inventory" class="tab-content">
         <h2>Inventory Management (Auto-Syncs with inventory.csv)</h2>
-        <p>Edit fields directly and click save on the row to update. <strong>Cost per Item</strong> is auto-calculated from Order Cost ÷ Qty per Unit.</p>
+        <p>Categories are collapsible. Click row headers to sort. <strong>Cost per Item</strong> is auto-calculated from Order Cost ÷ Qty per Unit.</p>
         <button onclick="loadInventory()">Refresh Inventory List</button>
-        <div style="overflow-x: auto; margin-top: 15px;">
-            <table style="font-size: 13px; min-width: 1200px;">
-                <thead>
-                    <tr>
-                        <th>Item Name</th>
-                        <th title="Current individual items in stock">Stock<br>On Hand</th>
-                        <th title="E.g., Keg, Case, Bottle">Size<br>per Unit</th>
-                        <th title="Amount of items inside the Ordered Unit">Qty<br>per Unit</th>
-                        <th title="Total cost to purchase the Size Unit">Order<br>Cost (gp)</th>
-                        <th title="Calculated break-down cost">Cost<br>per Item</th>
-                        <th title="Target maximum stock capacity">Base<br>Stock</th>
-                        <th title="Threshold to trigger auto-reorder">Restock<br>Level</th>
-                        <th title="Customer menu price">Sale<br>Price (gp)</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="inventory-table-body">
-                </tbody>
-            </table>
-        </div>
+        <div id="inventory-container" style="overflow-x: auto; margin-top: 15px;"></div>
     </div>
 
     <div id="staff" class="tab-content">

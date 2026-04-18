@@ -24,13 +24,14 @@ class SaleItem(BaseModel):
 
 class InventoryItem(BaseModel):
     item_name: str
-    stock_on_hand: int
-    size_per_unit: str
-    qty_per_unit: int
+    category: str
+    order_unit: str
     order_cost: float
+    qty_per_unit: int
     cost_per_item: float
     base_stock: int
     restock_level: int
+    stock_on_hand: int
     unit_price: float
 
 class LedgerEntry(BaseModel):

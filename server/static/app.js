@@ -1,10 +1,17 @@
 const API_URL = "http://localhost:8000/api";
 let pendingAutoSales = [];
 
+// NPC State
 let npcData = [];
 let npcSortCol = "first_name";
 let npcSortDir = 1;
 let collapsedFactions = {};
+
+// Inventory State
+let inventoryData = [];
+let invSortCol = "item_name";
+let invSortDir = 1;
+let collapsedInvCategories = {};
 
 // Calendar of Harptos State Variables
 let currentYear = 1492;
@@ -14,10 +21,7 @@ let isHoliday = false;
 let currentHolidayName = "";
 let isShieldmeet = false;
 
-const harptosMonths = [
-    "Hammer", "Alturiak", "Ches", "Tarsakh", "Mirtul", "Kythorn",
-    "Flamerule", "Eleasis", "Eleint", "Marpenoth", "Uktar", "Nightal"
-];
+const harptosMonths = ["Hammer", "Alturiak", "Ches", "Tarsakh", "Mirtul", "Kythorn", "Flamerule", "Eleasis", "Eleint", "Marpenoth", "Uktar", "Nightal"];
 
 function getFormattedDate() {
     if (isShieldmeet) return `Shieldmeet, ${currentYear} DR`;
@@ -25,43 +29,22 @@ function getFormattedDate() {
     return `${currentDay} ${harptosMonths[currentMonthIndex]}, ${currentYear} DR`;
 }
 
-function updateDateDisplay() {
-    document.getElementById('global_date_display').innerText = getFormattedDate();
-}
+function updateDateDisplay() { document.getElementById('global_date_display').innerText = getFormattedDate(); }
 
 function advanceDate() {
-    if (isShieldmeet) {
-        isShieldmeet = false;
-        isHoliday = false;
-        currentHolidayName = "";
-        currentMonthIndex = 7;
-        currentDay = 1;
-    } else if (isHoliday) {
-        if (currentHolidayName === "Midsummer" && (currentYear % 4 === 0)) {
-            isShieldmeet = true;
-            currentHolidayName = "Shieldmeet";
-            isHoliday = true; 
-        } else {
-            isHoliday = false;
-            currentHolidayName = "";
-            currentMonthIndex++;
-            if (currentMonthIndex > 11) { currentMonthIndex = 0; currentYear++; }
-            currentDay = 1;
-        }
+    if (isShieldmeet) { isShieldmeet = false; isHoliday = false; currentHolidayName = ""; currentMonthIndex = 7; currentDay = 1; }
+    else if (isHoliday) {
+        if (currentHolidayName === "Midsummer" && (currentYear % 4 === 0)) { isShieldmeet = true; currentHolidayName = "Shieldmeet"; isHoliday = true; }
+        else { isHoliday = false; currentHolidayName = ""; currentMonthIndex++; if (currentMonthIndex > 11) { currentMonthIndex = 0; currentYear++; } currentDay = 1; }
     } else {
-        if (currentDay < 30) {
-            currentDay++;
-        } else {
+        if (currentDay < 30) { currentDay++; }
+        else {
             if (currentMonthIndex === 0) { isHoliday = true; currentHolidayName = "Midwinter"; }
             else if (currentMonthIndex === 3) { isHoliday = true; currentHolidayName = "Greengrass"; }
             else if (currentMonthIndex === 6) { isHoliday = true; currentHolidayName = "Midsummer"; }
             else if (currentMonthIndex === 8) { isHoliday = true; currentHolidayName = "Highharvestide"; }
             else if (currentMonthIndex === 10) { isHoliday = true; currentHolidayName = "Feast of the Moon"; }
-            else {
-                currentMonthIndex++;
-                if (currentMonthIndex > 11) { currentMonthIndex = 0; currentYear++; }
-                currentDay = 1;
-            }
+            else { currentMonthIndex++; if (currentMonthIndex > 11) { currentMonthIndex = 0; currentYear++; } currentDay = 1; }
         }
     }
     updateDateDisplay();
@@ -71,7 +54,6 @@ function switchTab(tabId) {
     const tabs = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => tab.classList.remove('active-tab'));
     document.getElementById(tabId).classList.add('active-tab');
-    
     if(tabId === 'inventory') loadInventory();
     if(tabId === 'staff') loadStaff();
     if(tabId === 'ledger') loadLedger();
@@ -79,15 +61,7 @@ function switchTab(tabId) {
 }
 
 async function rollOutcome() {
-    const current_date_payload = {
-        month: currentMonthIndex + 1, 
-        day: currentDay,
-        year: currentYear,
-        is_holiday: isHoliday,
-        holiday_name: isHoliday ? currentHolidayName : null,
-        is_shieldmeet: isShieldmeet
-    };
-
+    const current_date_payload = { month: currentMonthIndex + 1, day: currentDay, year: currentYear, is_holiday: isHoliday, holiday_name: isHoliday ? currentHolidayName : null, is_shieldmeet: isShieldmeet };
     const payload = {
         base_roll: parseInt(document.getElementById('base_roll').value),
         renown_bonus: parseInt(document.getElementById('renown_bonus').value),
@@ -95,46 +69,21 @@ async function rollOutcome() {
         price_strategy: document.getElementById('price_strategy').value,
         current_date: current_date_payload
     };
-
-    const response = await fetch(`${API_URL}/roll`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    
+    const response = await fetch(`${API_URL}/roll`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await response.json();
     document.getElementById('outcome-result').style.display = 'block';
     
     pendingAutoSales = data.auto_sales;
-    
     let salesHtml = "<ul style='padding-left: 20px; font-size: 14px;'>";
-    if (pendingAutoSales.length === 0) {
-        salesHtml += "<li>No items sold.</li>";
-    } else {
-        pendingAutoSales.forEach(s => {
-            salesHtml += `<li><strong>${s.quantity}x</strong> ${s.item_name} <span style="color:#28a745; float:right;">+${s.total_price.toFixed(2)} gp</span></li>`;
-        });
-    }
+    if (pendingAutoSales.length === 0) { salesHtml += "<li>No items sold.</li>"; }
+    else { pendingAutoSales.forEach(s => { salesHtml += `<li><strong>${s.quantity}x</strong> ${s.item_name} <span style="color:#28a745; float:right;">+${s.total_price.toFixed(2)} gp</span></li>`; }); }
     salesHtml += "</ul>";
     document.getElementById('out-sales').innerHTML = salesHtml;
 
     let receiptsHtml = "";
     data.receipts.forEach(r => {
-        receiptsHtml += `
-            <div class="receipt-card">
-                <h4>${r.name}</h4>
-                <div style="font-size:11px; color:#aaa; margin-bottom: 8px;">
-                    Lifestyle: ${r.lifestyle} | Seating: ${r.seat} | Arrived: ${r.hour}
-                </div>
-        `;
-        r.items.forEach(item => {
-            receiptsHtml += `
-                <div class="receipt-item">
-                    <span>${item.qty}x ${item.name}</span>
-                    <span>${item.price.toFixed(2)} gp</span>
-                </div>
-            `;
-        });
+        receiptsHtml += `<div class="receipt-card"><h4>${r.name}</h4><div style="font-size:11px; color:#aaa; margin-bottom: 8px;">Lifestyle: ${r.lifestyle} | Seating: ${r.seat} | Arrived: ${r.hour}</div>`;
+        r.items.forEach(item => { receiptsHtml += `<div class="receipt-item"><span>${item.qty}x ${item.name}</span><span>${item.price.toFixed(2)} gp</span></div>`; });
         receiptsHtml += `<div class="receipt-total">Total: ${r.total.toFixed(2)} gp</div></div>`;
     });
     document.getElementById('out-receipts').innerHTML = receiptsHtml;
@@ -142,28 +91,16 @@ async function rollOutcome() {
 
 async function saveDay() {
     const dateStr = getFormattedDate();
-    const payload = {
-        calendar_date: dateStr,
-        sales: pendingAutoSales
-    };
-
-    const response = await fetch(`${API_URL}/save_day`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    const payload = { calendar_date: dateStr, sales: pendingAutoSales };
+    const response = await fetch(`${API_URL}/save_day`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
     if(response.ok) {
         const data = await response.json();
         let message = `Day ${dateStr} saved! Inventory deducted and CSVs synced.`;
-        
         if (data.restocks && data.restocks.length > 0) {
             message += `\n\nAUTOMATIC RESTOCK TRIGGERED:\n`;
-            data.restocks.forEach(msg => {
-                message += `- ${msg}\n`;
-            });
+            data.restocks.forEach(msg => { message += `- ${msg}\n`; });
         }
-        
         alert(message);
         pendingAutoSales = [];
         document.getElementById('out-sales').innerHTML = "<em>Sales have been committed to the ledger. Inventory deducted.</em>";
@@ -180,33 +117,108 @@ function calcCost(id) {
 
 async function loadInventory() {
     const response = await fetch(`${API_URL}/inventory`);
-    const data = await response.json();
-    const tbody = document.getElementById('inventory-table-body');
-    tbody.innerHTML = "";
-    
-    data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}" style="width: 150px;"></td>
-            <td><input class="editable-input small-input" type="number" id="inv_hand_${item._id}" value="${item.stock_on_hand}"></td>
-            <td><input class="editable-input" type="text" id="inv_size_${item._id}" value="${item.size_per_unit || 'Unit'}" style="width: 80px;"></td>
-            <td><input class="editable-input small-input" type="number" id="inv_qty_per_${item._id}" value="${item.qty_per_unit || 1}" oninput="calcCost('${item._id}')"></td>
-            <td><input class="editable-input small-input" type="number" id="inv_order_${item._id}" value="${item.order_cost || 0}" step="0.1" oninput="calcCost('${item._id}')"></td>
-            <td><span id="inv_cost_per_${item._id}" style="color:#d7ba7d;">${(item.cost_per_item || 0).toFixed(2)}</span></td>
-            <td><input class="editable-input small-input" type="number" id="inv_base_${item._id}" value="${item.base_stock || 0}"></td>
-            <td><input class="editable-input small-input" type="number" id="inv_restock_${item._id}" value="${item.restock_level || 0}"></td>
-            <td><input class="editable-input small-input" type="number" id="inv_price_${item._id}" value="${item.unit_price || 0}" step="0.1"></td>
-            <td><button onclick="updateInventoryItem('${item._id}')">Save</button></td>
-        `;
-        tbody.appendChild(tr);
+    inventoryData = await response.json();
+    renderInventory();
+}
+
+function sortInventory(col) {
+    if (invSortCol === col) invSortDir *= -1;
+    else { invSortCol = col; invSortDir = 1; }
+    renderInventory();
+}
+
+function toggleInvCategory(cat) {
+    collapsedInvCategories[cat] = !collapsedInvCategories[cat];
+    renderInventory();
+}
+
+function renderInventory() {
+    const groups = {};
+    inventoryData.forEach(inv => {
+        const cat = inv.category || "Uncategorized";
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(inv);
     });
+
+    for (let cat in groups) {
+        groups[cat].sort((a, b) => {
+            let valA = a[invSortCol]; let valB = b[invSortCol];
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            if (valA < valB) return -1 * invSortDir;
+            if (valA > valB) return 1 * invSortDir;
+            return 0;
+        });
+    }
+
+    let html = `
+        <table style="font-size: 13px; min-width: 1200px; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="cursor:pointer; width: 180px;" onclick="sortInventory('item_name')">Item Name ⇅</th>
+                    <th rowspan="2" style="cursor:pointer; width: 180px;" onclick="sortInventory('category')">Category ⇅</th>
+                    <th colspan="2" class="group-header bg-cost">ORDER BY</th>
+                    <th rowspan="2" title="Amount of items inside the Ordered Unit">Qty<br>per Unit</th>
+                    <th rowspan="2" class="bg-cost" title="Calculated break-down cost">Cost<br>per Item</th>
+                    <th rowspan="2" class="bg-stock">Base<br>Stock</th>
+                    <th rowspan="2" class="bg-stock">Restock<br>Level</th>
+                    <th rowspan="2" class="bg-stock">Current<br>Stock</th>
+                    <th rowspan="2" class="bg-revenue">Sale<br>Price (gp)</th>
+                    <th rowspan="2" style="background-color: #333;">Action</th>
+                </tr>
+                <tr>
+                    <th class="bg-cost" style="width: 80px;">Unit</th>
+                    <th class="bg-cost" style="width: 80px;">Cost (gp)</th>
+                </tr>
+            </thead>
+    `;
+
+    for (let cat in groups) {
+        const isCollapsed = collapsedInvCategories[cat];
+        html += `
+            <tbody>
+                <tr onclick="toggleInvCategory('${cat.replace(/'/g, "\\'")}')">
+                    <td colspan="11" class="cat-header">
+                        ${isCollapsed ? '▶' : '▼'} ${cat} (${groups[cat].length} Items)
+                    </td>
+                </tr>
+        `;
+        if (!isCollapsed) {
+            groups[cat].forEach(item => {
+                html += `
+                    <tr>
+                        <td><input class="editable-input" type="text" id="inv_name_${item._id}" value="${item.item_name}" style="width: 95%;"></td>
+                        <td><input class="editable-input" type="text" id="inv_cat_${item._id}" value="${item.category}" style="width: 95%;"></td>
+                        
+                        <td style="background-color: rgba(107, 36, 36, 0.15); border-left: 1px solid #6b2424;"><input class="editable-input" type="text" id="inv_unit_${item._id}" value="${item.order_unit || 'Unit'}"></td>
+                        <td style="background-color: rgba(107, 36, 36, 0.15); border-right: 1px solid #6b2424;"><input class="editable-input small-input" type="number" id="inv_order_${item._id}" value="${item.order_cost || 0}" step="0.1" oninput="calcCost('${item._id}')"></td>
+                        
+                        <td><input class="editable-input small-input" type="number" id="inv_qty_per_${item._id}" value="${item.qty_per_unit || 1}" oninput="calcCost('${item._id}')"></td>
+                        <td style="background-color: rgba(107, 36, 36, 0.3); font-weight: bold; text-align: center;"><span id="inv_cost_per_${item._id}" style="color:#d7ba7d;">${(item.cost_per_item || 0).toFixed(2)}</span></td>
+                        
+                        <td style="background-color: rgba(29, 75, 107, 0.2); border-left: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_base_${item._id}" value="${item.base_stock || 0}"></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2);"><input class="editable-input small-input" type="number" id="inv_restock_${item._id}" value="${item.restock_level || 0}"></td>
+                        <td style="background-color: rgba(29, 75, 107, 0.2); border-right: 1px solid #1d4b6b;"><input class="editable-input small-input" type="number" id="inv_hand_${item._id}" value="${item.stock_on_hand || 0}"></td>
+                        
+                        <td style="background-color: rgba(33, 89, 52, 0.2); border-left: 1px solid #215934; border-right: 1px solid #215934;"><input class="editable-input small-input" type="number" id="inv_price_${item._id}" value="${item.unit_price || 0}" step="0.1"></td>
+                        
+                        <td><button style="width: 100%; padding: 5px;" onclick="updateInventoryItem('${item._id}')">Save</button></td>
+                    </tr>
+                `;
+            });
+        }
+        html += `</tbody>`;
+    }
+    html += `</table>`;
+    document.getElementById('inventory-container').innerHTML = html;
 }
 
 async function updateInventoryItem(id) {
     const payload = {
         item_name: document.getElementById(`inv_name_${id}`).value,
+        category: document.getElementById(`inv_cat_${id}`).value,
         stock_on_hand: parseInt(document.getElementById(`inv_hand_${id}`).value),
-        size_per_unit: document.getElementById(`inv_size_${id}`).value,
+        order_unit: document.getElementById(`inv_unit_${id}`).value,
         qty_per_unit: parseInt(document.getElementById(`inv_qty_per_${id}`).value),
         order_cost: parseFloat(document.getElementById(`inv_order_${id}`).value),
         cost_per_item: parseFloat(document.getElementById(`inv_cost_per_${id}`).innerText),
@@ -214,8 +226,13 @@ async function updateInventoryItem(id) {
         restock_level: parseInt(document.getElementById(`inv_restock_${id}`).value),
         unit_price: parseFloat(document.getElementById(`inv_price_${id}`).value)
     };
-    await fetch(`${API_URL}/inventory/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    alert("Inventory Updated and inventory.csv Synced!");
+    const response = await fetch(`${API_URL}/inventory/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if(response.ok) {
+        alert("Inventory Updated and inventory.csv Synced!");
+        const idx = inventoryData.findIndex(n => n._id === id);
+        if (idx > -1) { inventoryData[idx] = { ...inventoryData[idx], ...payload, _id: id }; }
+        renderInventory();
+    }
 }
 
 async function loadStaff() {
@@ -345,7 +362,7 @@ function renderNpcs() {
 
     for (let affil in groups) {
         const isCollapsed = collapsedFactions[affil];
-        html += `<tbody><tr class="faction-header" onclick="toggleFaction('${affil.replace(/'/g, "\\'")}')"><td colspan="13" style="background-color: #333; cursor: pointer; color: #d7ba7d; font-weight: bold; padding: 10px;">${isCollapsed ? '▶' : '▼'} ${affil} (${groups[affil].length})</td></tr>`;
+        html += `<tbody><tr class="faction-header cat-header" onclick="toggleFaction('${affil.replace(/'/g, "\\'")}')"><td colspan="13">${isCollapsed ? '▶' : '▼'} ${affil} (${groups[affil].length})</td></tr>`;
         if (!isCollapsed) {
             groups[affil].forEach(npc => {
                 html += `
