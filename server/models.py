@@ -1,0 +1,71 @@
+from pydantic import BaseModel
+from typing import List
+from typing import Optional
+
+class HarptosState(BaseModel):
+    month: int
+    day: int
+    year: int
+    is_holiday: bool = False
+    holiday_name: Optional[str] = None
+    is_shieldmeet: bool = False
+
+class RollRequest(BaseModel):
+    base_roll: int
+    renown_bonus: int
+    environmental_bonus: int
+    current_date: Optional[HarptosState] = None
+    price_strategy: str = "Standard"
+
+class SaleItem(BaseModel):
+    item_name: str
+    quantity: int
+    total_price: float
+    sale_date: str
+
+class InventoryItem(BaseModel):
+    item_name: str
+    category: str
+    order_unit: str
+    order_quantity: int
+    unit_cost_copper: float
+    qty_per_unit: int
+    serve_size: str
+    cost_per_item_copper: float
+    sell_price_copper: float
+    margin_copper: float
+    stock_unit_quantity: int
+    reorder_level: int
+    status: str
+    reorder_quantity: int
+
+class LedgerEntry(BaseModel):
+    entry_type: str
+    description: str
+    amount: float
+    frequency: str
+    entry_date: str
+
+class StaffItem(BaseModel):
+    name: str
+    wage: float
+    frequency: str
+    bonus: int
+
+class SaveDayRequest(BaseModel):
+    calendar_date: str
+    sales: List[SaleItem]
+
+class NpcItem(BaseModel):
+    first_name: str
+    last_name: str
+    occupation: str
+    lifestyle: str
+    faction: str
+    age: int
+    bar_disposition: int
+    party_disposition: int
+    nobility_status: str
+    noble_house: str
+    story_connection: str
+    pc_affiliation: str

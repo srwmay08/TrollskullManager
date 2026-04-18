@@ -1,0 +1,183 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    margin: 0;
+    padding: 20px;
+    padding-top: 80px;
+}
+
+h1, h2, h3 {
+    color: #d7ba7d;
+}
+
+#top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #252526;
+    padding: 15px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.top-right-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.top-right-controls input {
+    width: 150px;
+    background-color: #3c3c3c;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.save-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 4px;
+}
+
+.save-btn:hover {
+    background-color: #218838;
+}
+
+nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+}
+
+button {
+    background-color: #007acc;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #005f9e;
+}
+
+.tab-content {
+    display: none;
+    background-color: #252526;
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.active-tab {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    background-color: #3c3c3c;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #444;
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #333;
+}
+
+.faction-header:hover td {
+    background-color: #444 !important;
+}
+
+.editable-input {
+    width: 90%;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #d7ba7d;
+}
+
+.editable-input:focus {
+    border: 1px solid #007acc;
+    background: #1e1e1e;
+}
+
+.stats-box {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background-color: #333;
+    padding: 15px;
+    border-radius: 4px;
+    flex: 1;
+    text-align: center;
+}
+
+.stat-card h3 {
+    margin: 0 0 10px 0;
+    color: #d7ba7d;
+}
+
+.auto-sales-list {
+    background-color: #1e1e1e;
+    padding: 10px;
+    border-left: 4px solid #007acc;
+    margin-top: 10px;
+}
+
+.hourly-patrons-list {
+    background-color: #1e1e1e;
+    padding: 10px;
+    border-left: 4px solid #d7ba7d;
+    margin-top: 15px;
+}
+
+.income-text {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.expense-text {
+    color: #dc3545;
+    font-weight: bold;
+}
