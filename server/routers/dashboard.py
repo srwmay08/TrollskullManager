@@ -27,7 +27,6 @@ def get_fallback_npcs():
         print(f"Fallback CSV read failed: {e}")
         
     if not fallback:
-        # Absolute failsafe if CSV is missing
         fallback = [{"first_name": "Mysterious", "last_name": "Stranger", "lifestyle": "Modest"}]
     return fallback
 
@@ -90,7 +89,9 @@ def simulate_tavern_day(request: RollRequest):
         valid_npcs = all_npcs 
         
     daily_visitors = [random.choice(valid_npcs) for _ in range(total_expected_patrons)]
-    inventory_db = list(db.inventory.find({"stock_unit_quantity": {"$gt": 0}}))
+    
+    # CRITICAL FIX: Updated field name to match the new 3-tier model
+    inventory_db = list(db.inventory.find({"stock_bottle_quantity": {"$gt": 0}}))
     inventory_state = {str(item["_id"]): item for item in inventory_db}
 
     hours_range = list(range(request.open_hour, request.close_hour))
@@ -115,26 +116,26 @@ def simulate_tavern_day(request: RollRequest):
                 break
             visitor = daily_visitors.pop(0)
             duration = random.randint(1, 3)
-            
-            lifestyle = visitor.get("lifestyle", "Modest")
             customer_name = f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip()
+            lifestyle = visitor.get("lifestyle", "Modest")
             
             active_patrons.append({
                 "name": customer_name,
                 "departure_idx": current_hour_idx + duration
             })
             
-            available_items = [item for item in inventory_state.values() if item["stock_unit_quantity"] > 0]
+            # Logic: NPC buys what they can afford
+            available_items = [item for item in inventory_state.values() if item["stock_bottle_quantity"] > 0]
             affordable_items = []
             
             if lifestyle in ["Squalid", "Poor"]:
-                affordable_items = [i for i in available_items if (i.get("sell_price_copper", 0) / 100.0) <= 0.5]
+                affordable_items = [i for i in available_items if (i.get("sell_price_serving_copper", 0) / 100.0) <= 0.5]
             elif lifestyle == "Modest":
-                affordable_items = [i for i in available_items if 0.1 <= (i.get("sell_price_copper", 0) / 100.0) <= 2.0]
+                affordable_items = [i for i in available_items if 0.1 <= (i.get("sell_price_serving_copper", 0) / 100.0) <= 2.0]
             elif lifestyle == "Comfortable":
-                affordable_items = [i for i in available_items if 1.0 <= (i.get("sell_price_copper", 0) / 100.0) <= 10.0]
+                affordable_items = [i for i in available_items if 1.0 <= (i.get("sell_price_serving_copper", 0) / 100.0) <= 10.0]
             else: 
-                affordable_items = [i for i in available_items if (i.get("sell_price_copper", 0) / 100.0) >= 5.0]
+                affordable_items = [i for i in available_items if (i.get("sell_price_serving_copper", 0) / 100.0) >= 5.0]
 
             if not affordable_items and available_items:
                 affordable_items = available_items
@@ -146,36 +147,35 @@ def simulate_tavern_day(request: RollRequest):
             for _ in range(num_items_to_buy):
                 if affordable_items:
                     chosen_item = random.choice(affordable_items)
-                    qty = 1
                     
-                    price_in_gp = (chosen_item.get("sell_price_copper", 0) / 100.0)
-                    cost_in_gp = (chosen_item.get("cost_per_item_copper", 0) / 100.0)
-                    qty_per_unit = chosen_item.get("qty_per_unit", 1)
-                    
-                    is_whole_unit = False
+                    # 3-Tier Sales Logic: High Lifestyles buy whole bottles
+                    is_buying_bottle = False
                     if lifestyle in ["Aristocratic", "Wealthy"] and random.random() < 0.3:
-                        is_whole_unit = True
+                        is_buying_bottle = True
                     elif lifestyle == "Comfortable" and random.random() < 0.1:
-                        is_whole_unit = True
+                        is_buying_bottle = True
 
-                    if is_whole_unit and qty_per_unit > 1 and chosen_item["stock_unit_quantity"] >= qty_per_unit:
-                        stock_deduction = qty_per_unit
-                        order_unit_name = chosen_item.get("order_unit", "Unit")
-                        item_label = f"{chosen_item['item_name']} (Whole {order_unit_name})"
-                        price_in_gp = price_in_gp * qty_per_unit
-                        cost_in_gp = cost_in_gp * qty_per_unit
+                    if is_buying_bottle:
+                        stock_deduction = 1.0 # One full bottle
+                        item_label = f"{chosen_item['item_name']} (Bottle)"
+                        price_in_gp = (chosen_item.get("sell_price_bottle_copper", 0) / 100.0)
+                        # Cost per bottle = (unit cost / bottles per unit)
+                        cost_in_gp = (chosen_item.get("unit_cost_copper", 0) / max(1, chosen_item.get("bottles_per_order_unit", 1))) / 100.0
                     else:
-                        stock_deduction = 1
-                        item_label = chosen_item["item_name"]
+                        # Serving deduction = 1 / servings per bottle
+                        stock_deduction = 1.0 / max(1, chosen_item.get("servings_per_bottle", 1))
+                        item_label = f"{chosen_item['item_name']} ({chosen_item.get('serve_size', 'Serve')})"
+                        price_in_gp = (chosen_item.get("sell_price_serving_copper", 0) / 100.0)
+                        cost_in_gp = (chosen_item.get("cost_per_serving_copper", 0) / 100.0)
                         
-                    if chosen_item["stock_unit_quantity"] >= stock_deduction:
-                        chosen_item["stock_unit_quantity"] -= stock_deduction
+                    if chosen_item["stock_bottle_quantity"] >= stock_deduction:
+                        chosen_item["stock_bottle_quantity"] -= stock_deduction
                         
-                        receipt_items.append({"name": item_label, "qty": qty, "price": price_in_gp * qty})
-                        receipt_total += (price_in_gp * qty)
+                        receipt_items.append({"name": item_label, "qty": 1, "price": price_in_gp})
+                        receipt_total += price_in_gp
                         
-                        total_gross_sales += (price_in_gp * qty)
-                        total_cost_of_goods += (cost_in_gp * qty)
+                        total_gross_sales += price_in_gp
+                        total_cost_of_goods += cost_in_gp
                         
                         if item_label not in consolidated_sales:
                             consolidated_sales[item_label] = {
@@ -183,13 +183,14 @@ def simulate_tavern_day(request: RollRequest):
                                 "total": 0.0, 
                                 "id": str(chosen_item["_id"]),
                                 "original_item_name": chosen_item["item_name"],
-                                "stock_deduction": 0
+                                "stock_deduction": 0.0
                             }
-                        consolidated_sales[item_label]["qty"] += qty
-                        consolidated_sales[item_label]["total"] += (price_in_gp * qty)
+                        consolidated_sales[item_label]["qty"] += 1
+                        consolidated_sales[item_label]["total"] += price_in_gp
                         consolidated_sales[item_label]["stock_deduction"] += stock_deduction
                         
-                        affordable_items = [i for i in affordable_items if i["stock_unit_quantity"] > 0]
+                        # Filter out empty stock items for this customer
+                        affordable_items = [i for i in affordable_items if i["stock_bottle_quantity"] > 0]
 
             if receipt_items:
                 customer_receipts.append({
@@ -240,8 +241,9 @@ def save_day_data(request: SaveDayRequest):
         db.sales.insert_one(sale.dict())
         inv_item = db.inventory.find_one({"item_name": sale.original_item_name})
         if inv_item:
-            new_stock = max(0, inv_item["stock_unit_quantity"] - sale.stock_deduction)
-            db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_unit_quantity": new_stock}})
+            # Match new stock field name
+            new_stock = max(0, inv_item["stock_bottle_quantity"] - sale.stock_deduction)
+            db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_bottle_quantity": new_stock}})
 
     if total_income > 0:
         ledger_income = {"entry_type": "Income", "description": f"Daily Bar Sales - {date_str}", "amount": total_income, "frequency": "Once", "entry_date": date_str}
@@ -252,18 +254,25 @@ def save_day_data(request: SaveDayRequest):
     restock_messages = []
     all_inventory = list(db.inventory.find())
     for inv in all_inventory:
-        current_stock = inv.get("stock_unit_quantity", 0)
-        restock_lvl = inv.get("reorder_level", 0)
+        # Match new stock/reorder field names
+        current_stock = inv.get("stock_bottle_quantity", 0)
+        restock_lvl = inv.get("reorder_level_bottles", 0)
+        
         if current_stock <= restock_lvl:
-            units_to_order = inv.get("reorder_quantity", 1)
-            items_received = units_to_order * inv.get("qty_per_unit", 1)
+            # Use ceiling math logic: Order enough whole units to fill target
+            target_stock = inv.get("target_restock_bottles", restock_lvl * 3)
+            bottles_needed = target_stock - current_stock
+            bottles_per_unit = inv.get("bottles_per_order_unit", 1)
+            
+            units_to_order = int(math.ceil(bottles_needed / bottles_per_unit))
+            items_received = units_to_order * bottles_per_unit
             total_order_cost_gp = (units_to_order * inv.get("unit_cost_copper", 0.0)) / 100.0
-            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_unit_quantity": items_received}})
+            
+            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_bottle_quantity": items_received}})
             desc = f"Auto-Restock: {units_to_order}x {inv.get('order_unit', 'Unit')} of {inv['item_name']}"
             db.ledger.insert_one({"entry_type": "Expense", "description": desc, "amount": total_order_cost_gp, "frequency": "Once", "entry_date": date_str})
             restock_messages.append(f"{desc} (Cost: {total_order_cost_gp} gp)")
 
-    # Deferred import: Solves load order crashing on startup
     from routers.inventory import sync_inventory_to_csv
     sync_inventory_to_csv()
     

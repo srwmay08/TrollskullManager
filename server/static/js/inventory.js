@@ -23,64 +23,64 @@ function renderInventoryTable() {
     });
 
     let html = `
-        <table style="font-size: 13px; min-width: 1400px; border-collapse: collapse; text-align: center; width: 100%;">
-            <thead>
-                <tr>
-                    <th rowspan="2" style="width: 120px;">CATEGORY</th>
-                    <th rowspan="2" style="width: 150px;">ITEM</th>
-                    <th colspan="3" style="background-color: #5a3232;">ORDER BY</th>
-                    <th colspan="2" style="background-color: #324a5a;">ITEMS / UNIT DETAILS</th>
-                    <th rowspan="2" style="background-color: #5a3232;">COST PER ITEM</th>
-                    <th rowspan="2" style="background-color: #325a3c;">SELL PRICE<br>IN COPPER</th>
-                    <th rowspan="2" style="background-color: #325a3c;">MARGIN<br>IN COPPER</th>
-                    <th rowspan="2" style="background-color: #324a5a;">STOCK UNIT<br>QUANTITY</th>
-                    <th rowspan="2" style="background-color: #324a5a;">REORDER<br>LEVEL</th>
-                    <th rowspan="2" style="background-color: #324a5a;">STATUS</th>
-                    <th rowspan="2" style="background-color: #324a5a;">REORDER<br>QUANTITY</th>
-                    <th rowspan="2" style="background-color: #222;">Action</th>
-                </tr>
-                <tr>
-                    <th style="background-color: #5a3232;">UNIT</th>
-                    <th style="background-color: #5a3232;">QUANTITY</th>
-                    <th style="background-color: #5a3232;">UNIT COST<br>(COPPER)</th>
-                    <th style="background-color: #324a5a;">QUANTITY<br>per UNIT</th>
-                    <th style="background-color: #324a5a;">SERVE SIZE</th>
-                </tr>
-            </thead>
+        <div style="overflow-x: auto; width: 100%;">
+            <table style="font-size: 0.85rem; min-width: 1300px; border-collapse: collapse; text-align: center; width: 100%;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #555;">
+                        <th rowspan="2" style="width: 250px; text-align: left; padding-left: 15px;">PRODUCT</th>
+                        <th colspan="3" style="background-color: #4a2a2a; border-right: 1px solid #666;">WHOLESALE UNIT</th>
+                        <th colspan="2" style="background-color: #2a3a4a; border-right: 1px solid #666;">STOCK UNIT (BOTTLE)</th>
+                        <th colspan="3" style="background-color: #2a4a2a; border-right: 1px solid #666;">RETAIL SERVING</th>
+                        <th rowspan="2" style="background-color: #222;">STOCK LEVEL</th>
+                        <th rowspan="2" style="background-color: #222;">REORDER</th>
+                        <th rowspan="2" style="background-color: #222;">STATUS</th>
+                        <th rowspan="2" style="background-color: #222;">ACTION</th>
+                    </tr>
+                    <tr style="font-size: 0.75rem; border-bottom: 2px solid #555;">
+                        <th style="background-color: #4a2a2a;">NAME</th>
+                        <th style="background-color: #4a2a2a;">BTL/UNIT</th>
+                        <th style="background-color: #4a2a2a;">COST (cp)</th>
+                        <th style="background-color: #2a3a4a;">SRV/BTL</th>
+                        <th style="background-color: #2a3a4a;">BTL SELL</th>
+                        <th style="background-color: #2a4a2a;">SIZE</th>
+                        <th style="background-color: #2a4a2a;">SRV SELL</th>
+                        <th style="background-color: #2a4a2a;">MARGIN</th>
+                    </tr>
+                </thead>
     `;
 
     for (let cat in groups) {
         const safeCat = cat.replace(/\s+/g, '-');
         html += `<tbody class="cat-group">`;
         html += `<tr class="cat-header" onclick="toggleCategory('${safeCat}')" style="cursor: pointer; user-select: none;">
-                    <td colspan="15" style="background-color: #444; text-align: left; padding: 8px; font-weight: bold;">
-                        <span id="icon_${safeCat}">▼</span> ${cat.toUpperCase()}
+                    <td colspan="14" style="background-color: #333; text-align: left; padding: 12px; font-weight: bold; color: #d7ba7d; letter-spacing: 1px; border-bottom: 1px solid #444;">
+                        <span id="icon_${safeCat}" style="margin-right: 10px;">▼</span> ${cat.toUpperCase()}
                     </td>
                  </tr>`;
         
         groups[cat].forEach(item => {
-            const statusColor = (item.status === 'ORDER' || item.status === 'Order') ? '#ff4d4d' : '#4dff4d';
-            html += `<tr id="inv_${item._id}" class="cat-row-${safeCat}">
-                <td contenteditable="true" class="inv-cat" style="text-align: left; padding-left: 5px;">${item.category}</td>
-                <td contenteditable="true" class="inv-name" style="text-align: left; padding-left: 5px;">${item.item_name}</td>
-                <td contenteditable="true" class="inv-unit" style="background-color: rgba(90, 50, 50, 0.2);">${item.order_unit}</td>
-                <td contenteditable="true" class="inv-ord-qty" style="background-color: rgba(90, 50, 50, 0.2);">${item.order_quantity}</td>
-                <td contenteditable="true" class="inv-cost-cp" style="background-color: rgba(90, 50, 50, 0.2);">${item.unit_cost_copper}</td>
-                <td contenteditable="true" class="inv-qty-per" style="background-color: rgba(50, 74, 90, 0.2);">${item.qty_per_unit}</td>
-                <td contenteditable="true" class="inv-serve" style="background-color: rgba(50, 74, 90, 0.2);">${item.serve_size}</td>
-                <td style="color: #d7ba7d; font-weight:bold;">${item.cost_per_item_copper.toFixed(2)}</td>
-                <td contenteditable="true" class="inv-sell" style="background-color: rgba(50, 90, 60, 0.2); font-weight:bold;">${item.sell_price_copper}</td>
-                <td style="color: #28a745; font-weight:bold;">${item.margin_copper.toFixed(2)}</td>
-                <td contenteditable="true" class="inv-stock" style="font-weight:bold; font-size: 14px; background-color: rgba(50, 74, 90, 0.3);">${item.stock_unit_quantity}</td>
-                <td contenteditable="true" class="inv-reorder-lvl" style="background-color: rgba(50, 74, 90, 0.2);">${item.reorder_level}</td>
-                <td style="font-weight:bold; color: ${statusColor}; background-color: rgba(50, 74, 90, 0.2);">${item.status}</td>
-                <td contenteditable="true" class="inv-reorder-qty" style="background-color: rgba(50, 74, 90, 0.2);">${item.reorder_quantity}</td>
-                <td><button onclick="saveInventory('${item._id}')">Save</button></td>
+            const statusColor = (item.status === 'ORDER') ? '#ff4d4d' : '#4dff4d';
+            const stockColor = (item.stock_bottle_quantity <= item.reorder_level_bottles) ? '#ff9999' : '#fff';
+            
+            html += `<tr id="inv_${item._id}" class="cat-row-${safeCat}" style="border-bottom: 1px solid #444; height: 40px;">
+                <td contenteditable="true" class="inv-name" style="text-align: left; padding-left: 15px; font-weight: 600;">${item.item_name}</td>
+                <td contenteditable="true" class="inv-unit-name" style="color: #bbb;">${item.order_unit}</td>
+                <td contenteditable="true" class="inv-bottles-per-unit">${item.bottles_per_order_unit}</td>
+                <td contenteditable="true" class="inv-cost-unit" style="font-family: monospace;">${item.unit_cost_copper}</td>
+                <td contenteditable="true" class="inv-servings-per-bottle">${item.servings_per_bottle}</td>
+                <td contenteditable="true" class="inv-sell-bottle" style="color: #d7ba7d;">${item.sell_price_bottle_copper}</td>
+                <td contenteditable="true" class="inv-serve-size" style="color: #bbb;">${item.serve_size}</td>
+                <td contenteditable="true" class="inv-sell-serve" style="font-weight:bold;">${item.sell_price_serving_copper}</td>
+                <td style="color: #28a745; font-weight:bold;">${item.margin_serving_copper.toFixed(0)}</td>
+                <td contenteditable="true" class="inv-stock-bottles" style="font-weight:bold; font-size: 1.1rem; color: ${stockColor}">${item.stock_bottle_quantity.toFixed(1)}</td>
+                <td contenteditable="true" class="inv-reorder-lvl">${item.reorder_level_bottles}</td>
+                <td style="font-weight:bold; color: ${statusColor};">${item.status}</td>
+                <td><button onclick="saveInventory('${item._id}')" style="padding: 4px 10px; cursor: pointer; background: #444; color: #fff; border: 1px solid #666; border-radius: 3px;">Save</button></td>
             </tr>`;
         });
         html += `</tbody>`;
     }
-    html += `</table>`;
+    html += `</table></div>`;
     document.getElementById('inventory-container').innerHTML = html;
 }
 
@@ -106,32 +106,35 @@ async function saveInventory(id) {
     const row = document.getElementById(`inv_${id}`);
     const original = inventoryData.find(i => i._id === id);
     
-    const unitCost = parseFloat(row.querySelector('.inv-cost-cp').innerText) || 0;
-    const qtyPerUnit = parseInt(row.querySelector('.inv-qty-per').innerText) || 1;
-    const sellPrice = parseFloat(row.querySelector('.inv-sell').innerText) || 0;
-    
-    const costPerItem = unitCost / qtyPerUnit;
-    const margin = sellPrice - costPerItem;
-    const stock = parseInt(row.querySelector('.inv-stock').innerText) || 0;
+    const costPerOrderUnit = parseFloat(row.querySelector('.inv-cost-unit').innerText) || 0;
+    const bottlesPerUnit = parseInt(row.querySelector('.inv-bottles-per-unit').innerText) || 1;
+    const servingsPerBottle = parseInt(row.querySelector('.inv-servings-per-bottle').innerText) || 1;
+    const sellPriceServe = parseFloat(row.querySelector('.inv-sell-serve').innerText) || 0;
+    const stockBottles = parseFloat(row.querySelector('.inv-stock-bottles').innerText) || 0;
     const reorderLvl = parseInt(row.querySelector('.inv-reorder-lvl').innerText) || 0;
-    const status = stock <= reorderLvl ? "ORDER" : "OK";
-
+    
+    const costPerBottle = costPerOrderUnit / bottlesPerUnit;
+    const costPerServing = costPerBottle / servingsPerBottle;
+    const marginServing = sellPriceServe - costPerServing;
+    
+    let status = (stockBottles <= reorderLvl) ? "ORDER" : "OK";
+    
+    // Maintain hidden values like target_restock from the original object
     const payload = {
         ...original,
-        category: row.querySelector('.inv-cat').innerText,
         item_name: row.querySelector('.inv-name').innerText,
-        order_unit: row.querySelector('.inv-unit').innerText,
-        order_quantity: parseInt(row.querySelector('.inv-ord-qty').innerText) || 1,
-        unit_cost_copper: unitCost,
-        qty_per_unit: qtyPerUnit,
-        serve_size: row.querySelector('.inv-serve').innerText,
-        cost_per_item_copper: costPerItem,
-        sell_price_copper: sellPrice,
-        margin_copper: margin,
-        stock_unit_quantity: stock,
-        reorder_level: reorderLvl,
-        status: status,
-        reorder_quantity: parseInt(row.querySelector('.inv-reorder-qty').innerText) || 0
+        order_unit: row.querySelector('.inv-unit-name').innerText,
+        bottles_per_order_unit: bottlesPerUnit,
+        unit_cost_copper: costPerOrderUnit,
+        servings_per_bottle: servingsPerBottle,
+        serve_size: row.querySelector('.inv-serve-size').innerText,
+        cost_per_serving_copper: costPerServing,
+        sell_price_serving_copper: sellPriceServe,
+        sell_price_bottle_copper: parseFloat(row.querySelector('.inv-sell-bottle').innerText) || 0,
+        margin_serving_copper: marginServing,
+        stock_bottle_quantity: stockBottles,
+        reorder_level_bottles: reorderLvl,
+        status: status
     };
 
     const response = await fetch(`${API_URL}/inventory/${id}`, { 
@@ -141,7 +144,6 @@ async function saveInventory(id) {
     });
     
     if (response.ok) {
-        alert("Inventory item saved successfully.");
         loadInventory();
     }
 }

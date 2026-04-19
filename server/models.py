@@ -27,7 +27,7 @@ class SaleItem(BaseModel):
     item_name: str
     original_item_name: str
     quantity: int
-    stock_deduction: int
+    stock_deduction: float  # Changed to float for fractional bottle deductions
     total_price: float
     sale_date: str
     serve_size: Optional[str] = None
@@ -37,17 +37,19 @@ class InventoryItem(BaseModel):
     category: str
     item_name: str
     order_unit: str
-    order_quantity: int
+    bottles_per_order_unit: int
     unit_cost_copper: float
-    qty_per_unit: int
+    servings_per_bottle: int
     serve_size: str
-    cost_per_item_copper: float
-    sell_price_copper: float
-    margin_copper: float
-    stock_unit_quantity: int
-    reorder_level: int
+    cost_per_serving_copper: float
+    sell_price_serving_copper: float
+    sell_price_bottle_copper: float
+    margin_serving_copper: float
+    stock_bottle_quantity: float
+    reorder_level_bottles: int
+    target_restock_bottles: int
     status: str
-    reorder_quantity: int
+    reorder_quantity_units: int
 
 
 class LedgerEntry(BaseModel):
