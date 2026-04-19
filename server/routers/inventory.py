@@ -19,19 +19,21 @@ def clean_inventory_csv() -> list:
         with open("inventory.csv", "r", encoding="utf-8") as f:
             reader = csv.reader(f)
             for row in reader:
-                if not row:
+                if not row or all(cell.strip() == "" for cell in row):
                     continue
                 
                 # Check if it's a data row: Category (0) must have text, 
                 # and Bottles Per Unit (3) must be numeric.
                 is_data_row = False
-                if len(row) >= 14 and row[0].strip() and row[3].strip().replace('.', '', 1).isdigit():
+                if len(row) >= 18 and row[0].strip():
                     try:
-                        # Validate that Column E (index 4) is a numeric unit cost
+                        # Validate that Column D (index 3) is numeric (Bottles Per Unit)
+                        float(row[3] or 0)
+                        # Validate that Column E (index 4) is numeric (Cost in Copper)
                         float(row[4] or 0)
                         is_data_row = True
                     except ValueError:
-                        pass
+                        is_data_row = False
                 
                 if is_data_row:
                     try:
@@ -43,14 +45,14 @@ def clean_inventory_csv() -> list:
                             "order_quantity": int(float(row[3] or 1)),
                             "unit_cost_copper": float(row[4] or 0),
                             "qty_per_unit": int(float(row[9] or 1)),      # index 9: Servings Per Bottle
-                            "serve_size": row[8].strip(),                 # index 8: Serving Size
+                            "serve_size": str(row[8].strip()),            # index 8: Serving Size (Explicit String)
                             "cost_per_item_copper": float(row[10] or 0),  # index 10: Calc Serve Cost
                             "sell_price_copper": float(row[11] or 0),     # index 11: Sell Price Serving
                             "margin_copper": float(row[12] or 0),         # index 12: Serving Margin
                             "stock_unit_quantity": int(float(row[13] or 0)), # index 13: Current Stock
                             "reorder_level": int(float(row[15] or 0)),    # index 15: Reorder Level
-                            "status": row[16] if len(row) > 16 else "OK", # index 16
-                            "reorder_quantity": int(float(row[17] or 0)) if len(row) > 17 else 0 # index 17
+                            "status": row[16] if len(row) > 16 else "OK", # index 16: Status
+                            "reorder_quantity": int(float(row[17] or 0)) if len(row) > 17 else 0 # index 17: Reorder Qty
                         })
                     except (ValueError, IndexError) as e:
                         print(f"Skipping row due to number parsing error: {row}. Error: {e}")
@@ -74,8 +76,7 @@ def sync_inventory_to_csv() -> None:
                 writer.writerow(header_row)
         else:
             # Reconstruct the 18-column header if metadata is lost
-            writer.writerow(["CATEGORY", "ITEM", "UNIT NAME", "BOTTLES PER ORDER UNIT", "COST IN COPPER", "CALCULATED UNIT COST", "SELL PRICE PER BOTTLE", "BOTTLE MARGIN", "SERVING SIZE", "SERVINGS PER BOTTLE", "CALCULATED SERVE COST", "SELL PRICE PER SERVING", "SERVING MARGIN", "CURRENT STOCK ( IN BOTTLES)", "PAR", "REORDER LVL", "STATUS", "REORDER QTY"])
-            writer.writerow([""] * 18)
+            writer.writerow(["CATEGORY", "ITEM", "UNIT NAME", "BOTTLES PER ORDER UNIT", "COST IN COPPER", "CALCULATED UNIT COST", "SELL PRICE PER BOTTLE", "BOTTLE MARGIN", "SERVING SIZE", "SERVINGS PER BOTTLE", "CALCULATED SERVE COST", "SELL PRICE PER SERVING", "SERVING MARGIN", "CURRENT STOCK ( IN BOTTLES)", "TARGET RESTOCK LEVEL", "REORDER LEVEL ( IN BOTTLES )", "STATUS", "REORDER QUANTITY"])
             
         # Grouping by category and name to maintain simulation structure
         items.sort(key=lambda x: (x.get("category", ""), x.get("item_name", "")))
@@ -89,13 +90,13 @@ def sync_inventory_to_csv() -> None:
                 0,  # index 5: Calculated Unit Cost placeholder
                 0,  # index 6: Bottle Sell placeholder
                 0,  # index 7: Bottle Margin placeholder
-                item.get("serve_size", ""),
+                str(item.get("serve_size", "")),
                 item.get("qty_per_unit", 1),
                 item.get("cost_per_item_copper", 0.0),
                 item.get("sell_price_copper", 0.0),
                 item.get("margin_copper", 0.0),
                 item.get("stock_unit_quantity", 0),
-                0,  # index 14: PAR placeholder
+                0,  # index 14: Target Restock Level placeholder
                 item.get("reorder_level", 0),
                 item.get("status", "OK"),
                 item.get("reorder_quantity", 0)
