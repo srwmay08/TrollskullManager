@@ -30,6 +30,7 @@ class SaleItem(BaseModel):
     stock_deduction: int
     total_price: float
     sale_date: str
+    serve_size: Optional[str] = None
 
 
 class InventoryItem(BaseModel):

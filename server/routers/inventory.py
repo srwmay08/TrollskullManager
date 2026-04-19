@@ -70,7 +70,7 @@ def sync_inventory_to_csv() -> None:
             writer.writerow(["CATEGORY", "ITEM", "UNIT", "QUANTITY", "UNIT COST IN COPPER", "QUANTITY per UNIT", "SERVE SIZE", "", "", "", "", "", "", ""])
             writer.writerow([""] * 14)
             
-        items.sort(key=lambda x: x.get("category", ""))
+        items.sort(key=lambda x: (x.get("category", ""), x.get("item_name", "")))
         for item in items:
             writer.writerow([
                 item.get("category", ""),
