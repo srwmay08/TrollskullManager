@@ -22,7 +22,7 @@ def clean_inventory_csv() -> list:
                 if not row:
                     continue
                 
-                # Check if it's a data row: Category (0) and Item (1) must exist, 
+                # Check if it's a data row: Category (0) must have text, 
                 # and Bottles Per Unit (3) must be numeric.
                 is_data_row = False
                 if len(row) >= 14 and row[0].strip() and row[3].strip().replace('.', '', 1).isdigit():
@@ -35,7 +35,7 @@ def clean_inventory_csv() -> list:
                 
                 if is_data_row:
                     try:
-                        # Mapping based on the 18-column Bottle Focus structure
+                        # Aligned mapping for the 18-column "Bottle Focus" structure
                         items.append({
                             "category": row[0].strip(),
                             "item_name": row[1].strip(),
@@ -44,7 +44,7 @@ def clean_inventory_csv() -> list:
                             "unit_cost_copper": float(row[4] or 0),
                             "qty_per_unit": int(float(row[9] or 1)),      # index 9: Servings Per Bottle
                             "serve_size": row[8].strip(),                 # index 8: Serving Size
-                            "cost_per_item_copper": float(row[10] or 0),  # index 10: Calculated Serve Cost
+                            "cost_per_item_copper": float(row[10] or 0),  # index 10: Calc Serve Cost
                             "sell_price_copper": float(row[11] or 0),     # index 11: Sell Price Serving
                             "margin_copper": float(row[12] or 0),         # index 12: Serving Margin
                             "stock_unit_quantity": int(float(row[13] or 0)), # index 13: Current Stock
@@ -53,7 +53,7 @@ def clean_inventory_csv() -> list:
                             "reorder_quantity": int(float(row[17] or 0)) if len(row) > 17 else 0 # index 17
                         })
                     except (ValueError, IndexError) as e:
-                        print(f"Skipping row due to parsing error: {row}. Error: {e}")
+                        print(f"Skipping row due to number parsing error: {row}. Error: {e}")
                 else:
                     inventory_csv_headers.append(row)
     except Exception as e:
@@ -73,7 +73,7 @@ def sync_inventory_to_csv() -> None:
             for header_row in inventory_csv_headers:
                 writer.writerow(header_row)
         else:
-            # Fallback reconstruction of the 18-column header
+            # Reconstruct the 18-column header if metadata is lost
             writer.writerow(["CATEGORY", "ITEM", "UNIT NAME", "BOTTLES PER ORDER UNIT", "COST IN COPPER", "CALCULATED UNIT COST", "SELL PRICE PER BOTTLE", "BOTTLE MARGIN", "SERVING SIZE", "SERVINGS PER BOTTLE", "CALCULATED SERVE COST", "SELL PRICE PER SERVING", "SERVING MARGIN", "CURRENT STOCK ( IN BOTTLES)", "PAR", "REORDER LVL", "STATUS", "REORDER QTY"])
             writer.writerow([""] * 18)
             
