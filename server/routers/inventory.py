@@ -22,31 +22,38 @@ def clean_inventory_csv() -> list:
                 if not row:
                     continue
                 
+                # Check if it's a data row: Category (0) and Item (1) must exist, 
+                # and Bottles Per Unit (3) must be numeric.
                 is_data_row = False
-                if len(row) > 4 and row[3].strip().isdigit():
+                if len(row) >= 14 and row[0].strip() and row[3].strip().replace('.', '', 1).isdigit():
                     try:
+                        # Validate that Column E (index 4) is a numeric unit cost
                         float(row[4] or 0)
                         is_data_row = True
                     except ValueError:
                         pass
                 
                 if is_data_row:
-                    items.append({
-                        "category": row[0],
-                        "item_name": row[1],
-                        "order_unit": row[2],
-                        "order_quantity": int(row[3] or 1),
-                        "unit_cost_copper": float(row[4] or 0),
-                        "qty_per_unit": int(row[5] or 1),
-                        "serve_size": row[6] if len(row) > 6 else "",
-                        "cost_per_item_copper": float(row[7] or 0) if len(row) > 7 else 0.0,
-                        "sell_price_copper": float(row[8] or 0) if len(row) > 8 else 0.0,
-                        "margin_copper": float(row[9] or 0) if len(row) > 9 else 0.0,
-                        "stock_unit_quantity": int(row[10] or 0) if len(row) > 10 else 0,
-                        "reorder_level": int(row[11] or 0) if len(row) > 11 else 0,
-                        "status": row[12] if len(row) > 12 else "OK",
-                        "reorder_quantity": int(row[13] or 0) if len(row) > 13 else 0
-                    })
+                    try:
+                        # Mapping based on the 18-column Bottle Focus structure
+                        items.append({
+                            "category": row[0].strip(),
+                            "item_name": row[1].strip(),
+                            "order_unit": row[2].strip(),
+                            "order_quantity": int(float(row[3] or 1)),
+                            "unit_cost_copper": float(row[4] or 0),
+                            "qty_per_unit": int(float(row[9] or 1)),      # index 9: Servings Per Bottle
+                            "serve_size": row[8].strip(),                 # index 8: Serving Size
+                            "cost_per_item_copper": float(row[10] or 0),  # index 10: Calculated Serve Cost
+                            "sell_price_copper": float(row[11] or 0),     # index 11: Sell Price Serving
+                            "margin_copper": float(row[12] or 0),         # index 12: Serving Margin
+                            "stock_unit_quantity": int(float(row[13] or 0)), # index 13: Current Stock
+                            "reorder_level": int(float(row[15] or 0)),    # index 15: Reorder Level
+                            "status": row[16] if len(row) > 16 else "OK", # index 16
+                            "reorder_quantity": int(float(row[17] or 0)) if len(row) > 17 else 0 # index 17
+                        })
+                    except (ValueError, IndexError) as e:
+                        print(f"Skipping row due to parsing error: {row}. Error: {e}")
                 else:
                     inventory_csv_headers.append(row)
     except Exception as e:
@@ -66,10 +73,11 @@ def sync_inventory_to_csv() -> None:
             for header_row in inventory_csv_headers:
                 writer.writerow(header_row)
         else:
-            writer.writerow(["", "", "ORDER BY", "", "", "ITEMS / UNIT DETAILS", "", "COST PER ITEM", "SELL PRICE IN COPPER", "MARGIN IN COPPER", "STOCK UNIT QUANTITY", "REORDER LEVEL", "STATUS", "REORDER QUANTITY"])
-            writer.writerow(["CATEGORY", "ITEM", "UNIT", "QUANTITY", "UNIT COST IN COPPER", "QUANTITY per UNIT", "SERVE SIZE", "", "", "", "", "", "", ""])
-            writer.writerow([""] * 14)
+            # Fallback reconstruction of the 18-column header
+            writer.writerow(["CATEGORY", "ITEM", "UNIT NAME", "BOTTLES PER ORDER UNIT", "COST IN COPPER", "CALCULATED UNIT COST", "SELL PRICE PER BOTTLE", "BOTTLE MARGIN", "SERVING SIZE", "SERVINGS PER BOTTLE", "CALCULATED SERVE COST", "SELL PRICE PER SERVING", "SERVING MARGIN", "CURRENT STOCK ( IN BOTTLES)", "PAR", "REORDER LVL", "STATUS", "REORDER QTY"])
+            writer.writerow([""] * 18)
             
+        # Grouping by category and name to maintain simulation structure
         items.sort(key=lambda x: (x.get("category", ""), x.get("item_name", "")))
         for item in items:
             writer.writerow([
@@ -78,12 +86,16 @@ def sync_inventory_to_csv() -> None:
                 item.get("order_unit", ""),
                 item.get("order_quantity", 1),
                 item.get("unit_cost_copper", 0.0),
-                item.get("qty_per_unit", 1),
+                0,  # index 5: Calculated Unit Cost placeholder
+                0,  # index 6: Bottle Sell placeholder
+                0,  # index 7: Bottle Margin placeholder
                 item.get("serve_size", ""),
+                item.get("qty_per_unit", 1),
                 item.get("cost_per_item_copper", 0.0),
                 item.get("sell_price_copper", 0.0),
                 item.get("margin_copper", 0.0),
                 item.get("stock_unit_quantity", 0),
+                0,  # index 14: PAR placeholder
                 item.get("reorder_level", 0),
                 item.get("status", "OK"),
                 item.get("reorder_quantity", 0)
@@ -96,7 +108,8 @@ def trigger_inventory_sync():
     if items:
         db.inventory.delete_many({})
         db.inventory.insert_many(items)
-    return {"status": "Inventory re-synced from local CSV successfully."}
+        return {"status": "Inventory re-synced from local CSV successfully.", "count": len(items)}
+    return {"status": "No items found to sync."}
 
 
 @router.get("/api/inventory")
