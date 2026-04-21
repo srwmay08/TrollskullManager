@@ -85,7 +85,7 @@ function advanceDate() {
     updateDateDisplay();
 }
 
-// Restores tab navigation functionality
+// Restores tab navigation functionality and auto-refreshes data
 function switchTab(tabId) {
     // 1. Hide all tabs and remove active class
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -105,6 +105,11 @@ function switchTab(tabId) {
     if (tabId === 'staff' && typeof window.loadStaff === 'function') window.loadStaff();
     if (tabId === 'ledger' && typeof window.loadLedger === 'function') window.loadLedger();
     if (tabId === 'npcs' && typeof window.loadNpcs === 'function') window.loadNpcs();
+    
+    // Automatically trigger the staff bonus pull when returning to the dashboard
+    if (tabId === 'dashboard' && typeof window.fetchStaffBonusDisplay === 'function') {
+        window.fetchStaffBonusDisplay();
+    }
 }
 
 // Initialize the app state on page load

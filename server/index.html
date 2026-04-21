@@ -58,10 +58,14 @@
             </div>
             <div style="flex: 1;">
                 <h3>Simulation Modifiers</h3>
-                <div class="form-group"><label>Base Roll:</label><input type="number" id="base_roll" value="50"></div>
-                <div class="form-group"><label>Random Roll:</label><input type="number" id="random_roll" value="0"></div>
-                <div class="form-group"><label>Staff Bonus:</label><input type="number" id="staff_bonus" value="0" readonly style="background:#444; color:#aaa; cursor:not-allowed;" title="Auto-calculated from Staff tab"></div>
-                <div class="form-group"><label>Renown:</label><input type="number" id="renown_bonus" value="0"></div>
+                <div class="form-group"><label>Tavern Roll (d100):</label><input type="number" id="tavern_roll" value="50"></div>
+                <div class="form-group"><label>Service Roll (d20):</label><input type="number" id="service_roll" value="10"></div>
+                <div class="form-group"><label>Security Roll (d20):</label><input type="number" id="security_roll" value="10"></div>
+                
+                <div class="form-group"><label>Staff Service Bonus:</label><input type="number" id="staff_service_bonus" value="0" readonly style="background:#444; color:#aaa; cursor:not-allowed;"></div>
+                <div class="form-group"><label>Staff Security Bonus:</label><input type="number" id="staff_security_bonus" value="0" readonly style="background:#444; color:#aaa; cursor:not-allowed;"></div>
+                
+                <div class="form-group"><label>Tavern Renown:</label><input type="number" id="renown_bonus" value="0"></div>
                 <div class="form-group"><label>Strategy:</label>
                     <select id="price_strategy">
                         <option value="Dive">Dive</option>
@@ -92,6 +96,8 @@
                         <h4>Net Profit (Gross - Cost)</h4>
                         <div class="value" id="out-profit">0.00 gp</div>
                     </div>
+                    
+                    <div id="out-renown-shift"></div>
                     
                     <h3>Items Depleted</h3>
                     <div id="out-sales" style="background: #111; padding: 10px; border: 1px solid #333;"></div>
@@ -125,11 +131,11 @@
         <div id="npc-dynamic-container" style="overflow-x: auto; margin-top: 15px;"></div>
     </div>
 
-    <script src="/static/js/globals.js?v=3"></script>
-    <script src="/static/js/inventory.js?v=3"></script>
-    <script src="/static/js/staff.js?v=3"></script>
-    <script src="/static/js/npcs.js?v=3"></script>
-    <script src="/static/js/ledger.js?v=3"></script>
-    <script src="/static/js/dashboard.js?v=3"></script>
+    <script src="/static/js/globals.js?v=4"></script>
+    <script src="/static/js/inventory.js?v=4"></script>
+    <script src="/static/js/staff.js?v=4"></script>
+    <script src="/static/js/npcs.js?v=4"></script>
+    <script src="/static/js/ledger.js?v=4"></script>
+    <script src="/static/js/dashboard.js?v=4"></script>
 </body>
 </html>

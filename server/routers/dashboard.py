@@ -53,10 +53,27 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
 
     staff_cursor = list(db.staff.find())
     
-    # Calculate specialized staff impacts
-    total_staff_bonus: int = sum(staff.get("bonus", 0) for staff in staff_cursor)
-    entertainer_active: bool = any(staff.get("role") == "Entertainer" for staff in staff_cursor)
-    bouncer_active: bool = any(staff.get("role") == "Bouncer" for staff in staff_cursor)
+    # Calculate specialized staff impacts safely
+    total_staff_bonus: int = 0
+    entertainer_active: bool = False
+    bouncer_active: bool = False
+    
+    for staff in staff_cursor:
+        # Create a lowercase mapping of the keys for dynamic CSV headers
+        staff_keys = {k.lower(): k for k in staff.keys()}
+        
+        if "bonus" in staff_keys:
+            try:
+                total_staff_bonus += int(staff[staff_keys["bonus"]])
+            except (ValueError, TypeError):
+                pass
+                
+        if "role" in staff_keys:
+            role_str = str(staff[staff_keys["role"]]).lower().strip()
+            if role_str == "entertainer":
+                entertainer_active = True
+            elif role_str in ["bouncer", "guard", "security"]:
+                bouncer_active = True
 
     total_roll: int = request.base_roll + total_staff_bonus + request.renown_bonus + request.environmental_bonus
     
@@ -146,12 +163,17 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
                 break
             visitor: Dict[str, Any] = daily_visitors.pop(0)
             duration: int = random.randint(1, 3)
-            customer_name: str = f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip()
+            
+            # Case-insensitive checks for NPC fields too, just in case
+            v_keys = {k.lower(): k for k in visitor.keys()}
+            f_name = visitor[v_keys["first_name"]] if "first_name" in v_keys else ""
+            l_name = visitor[v_keys["last_name"]] if "last_name" in v_keys else ""
+            customer_name: str = f"{f_name} {l_name}".strip()
             lifestyle: str = visitor.get("lifestyle", "Modest")
             
             # Quest / Narrative Hook Trigger
             if visitor.get("is_quest_giver") and visitor.get("quest_hook_text"):
-                trigger_chance = visitor.get("quest_trigger_chance", 0.05)
+                trigger_chance = float(visitor.get("quest_trigger_chance", 0.05))
                 if random.random() <= trigger_chance:
                     hook = f"{hr_label} - EVENT: {customer_name} has arrived. {visitor.get('quest_hook_text')}"
                     if hook not in triggered_events:
@@ -171,17 +193,17 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
                 "departure_idx": current_hour_idx + duration
             })
             
-            available_items: List[Dict[str, Any]] = [item for item in inventory_state.values() if item["stock_bottle_quantity"] > 0]
+            available_items: List[Dict[str, Any]] = [item for item in inventory_state.values() if item.get("stock_bottle_quantity", 0) > 0]
             affordable_items: List[Dict[str, Any]] = []
             
             if lifestyle in ["Squalid", "Poor"]:
-                affordable_items = [i for i in available_items if (i.get("sell_price_serving_copper", 0) / 100.0) <= 0.5]
+                affordable_items = [i for i in available_items if (float(i.get("sell_price_serving_copper", 0)) / 100.0) <= 0.5]
             elif lifestyle == "Modest":
-                affordable_items = [i for i in available_items if 0.1 <= (i.get("sell_price_serving_copper", 0) / 100.0) <= 2.0]
+                affordable_items = [i for i in available_items if 0.1 <= (float(i.get("sell_price_serving_copper", 0)) / 100.0) <= 2.0]
             elif lifestyle == "Comfortable":
-                affordable_items = [i for i in available_items if 1.0 <= (i.get("sell_price_serving_copper", 0) / 100.0) <= 10.0]
+                affordable_items = [i for i in available_items if 1.0 <= (float(i.get("sell_price_serving_copper", 0)) / 100.0) <= 10.0]
             else: 
-                affordable_items = [i for i in available_items if (i.get("sell_price_serving_copper", 0) / 100.0) >= 5.0]
+                affordable_items = [i for i in available_items if (float(i.get("sell_price_serving_copper", 0)) / 100.0) >= 5.0]
 
             if not affordable_items and available_items:
                 affordable_items = available_items
@@ -202,17 +224,17 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
 
                     if is_buying_bottle:
                         stock_deduction: float = 1.0
-                        item_label: str = f"{chosen_item['item_name']} (Bottle)"
-                        price_in_gp: float = (chosen_item.get("sell_price_bottle_copper", 0) / 100.0)
-                        cost_in_gp: float = (chosen_item.get("unit_cost_copper", 0) / max(1, chosen_item.get("bottles_per_order_unit", 1))) / 100.0
+                        item_label: str = f"{chosen_item.get('item_name', 'Unknown')} (Bottle)"
+                        price_in_gp: float = (float(chosen_item.get("sell_price_bottle_copper", 0)) / 100.0)
+                        cost_in_gp: float = (float(chosen_item.get("unit_cost_copper", 0)) / max(1, float(chosen_item.get("bottles_per_order_unit", 1)))) / 100.0
                     else:
-                        stock_deduction = 1.0 / max(1, chosen_item.get("servings_per_bottle", 1))
-                        item_label = f"{chosen_item['item_name']} ({chosen_item.get('serve_size', 'Serve')})"
-                        price_in_gp = (chosen_item.get("sell_price_serving_copper", 0) / 100.0)
-                        cost_in_gp = (chosen_item.get("cost_per_serving_copper", 0) / 100.0)
+                        stock_deduction = 1.0 / max(1, float(chosen_item.get("servings_per_bottle", 1)))
+                        item_label = f"{chosen_item.get('item_name', 'Unknown')} ({chosen_item.get('serve_size', 'Serve')})"
+                        price_in_gp = (float(chosen_item.get("sell_price_serving_copper", 0)) / 100.0)
+                        cost_in_gp = (float(chosen_item.get("cost_per_serving_copper", 0)) / 100.0)
                         
-                    if chosen_item["stock_bottle_quantity"] >= stock_deduction:
-                        chosen_item["stock_bottle_quantity"] -= stock_deduction
+                    if float(chosen_item.get("stock_bottle_quantity", 0)) >= stock_deduction:
+                        chosen_item["stock_bottle_quantity"] = float(chosen_item["stock_bottle_quantity"]) - stock_deduction
                         
                         receipt_items.append({"name": item_label, "qty": 1, "price": price_in_gp})
                         receipt_total += price_in_gp
@@ -225,14 +247,14 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
                                 "qty": 0, 
                                 "total": 0.0, 
                                 "id": str(chosen_item["_id"]),
-                                "original_item_name": chosen_item["item_name"],
+                                "original_item_name": chosen_item.get("item_name", "Unknown"),
                                 "stock_deduction": 0.0
                             }
                         consolidated_sales[item_label]["qty"] += 1
                         consolidated_sales[item_label]["total"] += price_in_gp
                         consolidated_sales[item_label]["stock_deduction"] += stock_deduction
                         
-                        affordable_items = [i for i in affordable_items if i["stock_bottle_quantity"] > 0]
+                        affordable_items = [i for i in affordable_items if float(i.get("stock_bottle_quantity", 0)) > 0]
 
             if receipt_items:
                 customer_receipts.append({
@@ -288,10 +310,16 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
     for sale in request.sales:
         total_income += sale.total_price
         db.sales.insert_one(sale.dict())
-        inv_item = db.inventory.find_one({"item_name": sale.original_item_name})
-        if inv_item:
-            new_stock: float = max(0, inv_item.get("stock_bottle_quantity", 0) - sale.stock_deduction)
-            db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_bottle_quantity": new_stock}})
+        
+        # We need a case-insensitive lookup for inventory items too!
+        all_inv = list(db.inventory.find())
+        for inv_doc in all_inv:
+            inv_keys = {k.lower(): k for k in inv_doc.keys()}
+            if "item_name" in inv_keys and str(inv_doc[inv_keys["item_name"]]) == sale.original_item_name:
+                stock_key = inv_keys.get("stock_bottle_quantity", "stock_bottle_quantity")
+                new_stock: float = max(0, float(inv_doc.get(stock_key, 0)) - sale.stock_deduction)
+                db.inventory.update_one({"_id": inv_doc["_id"]}, {"$set": {stock_key: new_stock}})
+                break
 
     if total_income > 0:
         ledger_income: Dict[str, Any] = {
@@ -308,20 +336,29 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
     restock_messages: List[str] = []
     all_inventory: List[Dict[str, Any]] = list(db.inventory.find())
     for inv in all_inventory:
-        current_stock: float = inv.get("stock_bottle_quantity", 0)
-        restock_lvl: int = inv.get("reorder_level_bottles", 0)
+        inv_keys = {k.lower(): k for k in inv.keys()}
+        stock_key = inv_keys.get("stock_bottle_quantity", "stock_bottle_quantity")
+        reorder_key = inv_keys.get("reorder_level_bottles", "reorder_level_bottles")
+        target_key = inv_keys.get("target_restock_bottles", "target_restock_bottles")
+        b_per_u_key = inv_keys.get("bottles_per_order_unit", "bottles_per_order_unit")
+        cost_key = inv_keys.get("unit_cost_copper", "unit_cost_copper")
+        name_key = inv_keys.get("item_name", "item_name")
+        order_unit_key = inv_keys.get("order_unit", "order_unit")
+
+        current_stock: float = float(inv.get(stock_key, 0))
+        restock_lvl: int = int(inv.get(reorder_key, 0))
         
-        if current_stock <= restock_lvl:
-            target_stock: int = inv.get("target_restock_bottles", restock_lvl * 3)
+        if current_stock <= restock_lvl and restock_lvl > 0:
+            target_stock: int = int(inv.get(target_key, restock_lvl * 3))
             bottles_needed: float = target_stock - current_stock
-            bottles_per_unit: int = inv.get("bottles_per_order_unit", 1)
+            bottles_per_unit: int = int(inv.get(b_per_u_key, 1))
             
             units_to_order: int = int(math.ceil(bottles_needed / bottles_per_unit))
             items_received: int = units_to_order * bottles_per_unit
-            total_order_cost_gp: float = (units_to_order * inv.get("unit_cost_copper", 0.0)) / 100.0
+            total_order_cost_gp: float = (units_to_order * float(inv.get(cost_key, 0.0))) / 100.0
             
-            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_bottle_quantity": items_received}})
-            desc: str = f"Auto-Restock: {units_to_order}x {inv.get('order_unit', 'Unit')} of {inv.get('item_name', 'Unknown Item')}"
+            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {stock_key: items_received}})
+            desc: str = f"Auto-Restock: {units_to_order}x {inv.get(order_unit_key, 'Unit')} of {inv.get(name_key, 'Unknown Item')}"
             db.ledger.insert_one({
                 "entry_type": "Expense", 
                 "description": desc, 
@@ -335,9 +372,14 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
     if request.pay_wages:
         staff_cursor = db.staff.find()
         for staff in staff_cursor:
-            wage: float = staff.get("wage", 0.0)
+            s_keys = {k.lower(): k for k in staff.keys()}
+            wage_key = s_keys.get("wage", "wage")
+            name_key = s_keys.get("name", "name")
+            role_key = s_keys.get("role", "role")
+            
+            wage: float = float(staff.get(wage_key, 0.0))
             if wage > 0:
-                desc = f"Payroll: {staff.get('name', 'Unknown Staff')} ({staff.get('role', 'Staff')})"
+                desc = f"Payroll: {staff.get(name_key, 'Unknown Staff')} ({staff.get(role_key, 'Staff')})"
                 db.ledger.insert_one({
                     "entry_type": "Expense",
                     "description": desc,
@@ -345,7 +387,7 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
                     "frequency": "Once",
                     "entry_date": date_str
                 })
-                payroll_messages.append(f"Paid {wage} gp to {staff.get('name', 'Unknown Staff')}")
+                payroll_messages.append(f"Paid {wage} gp to {staff.get(name_key, 'Unknown Staff')}")
 
     from routers.inventory import sync_collection_to_csv
     sync_collection_to_csv(db.inventory, "inventory.csv")

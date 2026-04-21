@@ -1,29 +1,80 @@
 let currentDayData = null; 
+let pendingRenownChange = 0;
 
-// Fetch current staff bonuses and display them on the dashboard
+// Fetch current staff bonuses and split them intelligently
 async function fetchStaffBonusDisplay() {
     try {
         const res = await fetch('/api/staff');
         if (!res.ok) return;
         const staff = await res.json();
-        // Sum up bonuses from staff array
-        const totalBonus = staff.reduce((sum, s) => sum + (parseInt(s.bonus) || 0), 0);
-        const bonusInput = document.getElementById('staff_bonus');
-        if (bonusInput) bonusInput.value = totalBonus;
+        
+        let srvBonus = 0;
+        let secBonus = 0;
+        
+        staff.forEach(s => {
+            let bonusVal = 0;
+            let roleStr = '';
+
+            // Iterate over every key to find 'bonus' and 'role' robustly
+            for (const key in s) {
+                const cleanKey = key.toLowerCase().trim();
+                if (cleanKey === 'bonus') {
+                    bonusVal = parseInt(s[key]) || 0;
+                }
+                if (cleanKey === 'role') {
+                    roleStr = String(s[key]).toLowerCase().trim();
+                }
+            }
+            
+            // Bouncers and guards provide security, everyone else provides service
+            if (roleStr.includes('bouncer') || roleStr.includes('guard') || roleStr.includes('security')) {
+                secBonus += bonusVal;
+            } else {
+                srvBonus += bonusVal;
+            }
+        });
+        
+        const srvInput = document.getElementById('staff_service_bonus');
+        if (srvInput) srvInput.value = srvBonus;
+        
+        const secInput = document.getElementById('staff_security_bonus');
+        if (secInput) secInput.value = secBonus;
+        
     } catch (e) {
         console.error("Could not fetch staff bonus for dashboard.", e);
     }
 }
 
-// Call this when the dashboard loads to keep the field updated
-document.addEventListener('DOMContentLoaded', fetchStaffBonusDisplay);
+window.fetchStaffBonusDisplay = fetchStaffBonusDisplay;
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchStaffBonusDisplay();
+    
+    // Load persistent renown from previous days
+    const savedRenown = localStorage.getItem('tavern_renown');
+    if (savedRenown !== null) {
+        const renownInput = document.getElementById('renown_bonus');
+        if (renownInput) renownInput.value = savedRenown;
+    }
+});
 
 async function rollOutcome() {
-    const baseInput = parseInt(document.getElementById('base_roll').value) || 0;
-    const randomInput = parseInt(document.getElementById('random_roll').value) || 0;
+    const tavernRoll = parseInt(document.getElementById('tavern_roll').value) || 0;
+    const serviceRoll = parseInt(document.getElementById('service_roll').value) || 0;
+    const securityRoll = parseInt(document.getElementById('security_roll').value) || 0;
     
-    // Combine base and random roll seamlessly for the backend calculation
-    const calculatedBaseRoll = baseInput + randomInput;
+    // Total raw dice determines the Ebb and Flow of Renown (Max raw dice is 140)
+    const rawDiceTotal = tavernRoll + serviceRoll + securityRoll;
+    if (rawDiceTotal >= 110) pendingRenownChange = 3;
+    else if (rawDiceTotal >= 95) pendingRenownChange = 2;
+    else if (rawDiceTotal >= 80) pendingRenownChange = 1;
+    else if (rawDiceTotal <= 20) pendingRenownChange = -3;
+    else if (rawDiceTotal <= 30) pendingRenownChange = -2;
+    else if (rawDiceTotal <= 40) pendingRenownChange = -1;
+    else pendingRenownChange = 0;
+
+    // The backend receives the raw dice sum. (It automatically adds staff bonuses on its end)
+    const calculatedBaseRoll = tavernRoll + serviceRoll + securityRoll;
 
     const renownBonus = parseInt(document.getElementById('renown_bonus').value) || 0;
     const envBonus = parseInt(document.getElementById('env_bonus').value) || 0;
@@ -77,11 +128,23 @@ function renderDashboardOutcome(data) {
         document.getElementById('out-profit').innerText = "0.00 gp";
         document.getElementById('out-sales').innerHTML = "<p>Tavern was closed today.</p>";
         document.getElementById('out-npc-hourly').innerHTML = "";
+        document.getElementById('out-renown-shift').innerHTML = "";
         return;
     }
 
     document.getElementById('out-gross').innerText = parseFloat(data.total_gross).toFixed(2) + " gp";
     document.getElementById('out-profit').innerText = parseFloat(data.total_profit).toFixed(2) + " gp";
+
+    // Display the calculated Renown Shift
+    document.getElementById('out-renown-shift').innerHTML = `
+        <div class="summary-box" style="border-color: ${pendingRenownChange > 0 ? '#28a745' : (pendingRenownChange < 0 ? '#dc3545' : '#444')}">
+            <h4>Daily Renown Shift</h4>
+            <div class="value" style="color: ${pendingRenownChange > 0 ? '#28a745' : (pendingRenownChange < 0 ? '#dc3545' : '#aaa')}">
+                ${pendingRenownChange > 0 ? '+' : ''}${pendingRenownChange}
+            </div>
+            <div style="font-size: 0.75rem; color: #888; margin-top: 5px;">Applied when day is saved.</div>
+        </div>
+    `;
 
     let salesHtml = `
         <table style="width:100%; text-align:left; border-collapse: collapse; font-size: 0.9rem;">
@@ -185,7 +248,6 @@ async function saveDay() {
         return;
     }
 
-    // Rely securely on Harptos directly for the Ledger
     let dateStr = "Unknown Date";
     if (typeof window.getFormattedDate === 'function') {
         dateStr = window.getFormattedDate();
@@ -221,6 +283,14 @@ async function saveDay() {
 
         if (response.ok) {
             alert("Day successfully saved to Ledger!");
+            
+            // Permanently commit and persist the renown change
+            const currentRenown = parseInt(document.getElementById('renown_bonus').value) || 0;
+            const newRenown = currentRenown + pendingRenownChange;
+            localStorage.setItem('tavern_renown', newRenown);
+            document.getElementById('renown_bonus').value = newRenown;
+            pendingRenownChange = 0;
+            
             currentDayData = null;
             document.getElementById('outcome-result').style.display = 'none';
             

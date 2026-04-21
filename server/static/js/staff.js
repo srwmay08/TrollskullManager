@@ -42,7 +42,7 @@ function renderStaffTable() {
         html += `<tr id="staff_row_${row._id || 'new_' + rowIndex}">`;
         staffCols.forEach(col => {
             let val = row[col] !== undefined && row[col] !== null ? row[col] : '';
-            html += `<td contenteditable="true" style="padding: 8px; border: 1px solid #444; background: #222; color: #fff;">${val}</td>`;
+            html += `<td contenteditable="true" data-col="${col}" style="padding: 8px; border: 1px solid #444; background: #222; color: #fff;">${val}</td>`;
         });
         html += `<td style="padding: 8px; border: 1px solid #444; background: #222; white-space: nowrap;">
             <button onclick="saveStaffRow('${row._id || ''}', this)" style="margin-right: 5px;">Save</button>
@@ -52,7 +52,6 @@ function renderStaffTable() {
     
     html += `</tbody></table></div>`;
     
-    // Safely inject without destroying the static HTML shell
     let container = document.getElementById('staff-dynamic-container');
     if (!container) {
         container = document.createElement('div');
@@ -70,12 +69,11 @@ function addStaffRow() { staffData.unshift({}); renderStaffTable(); }
 
 async function saveStaffRow(id, btnEl) {
     const tr = btnEl.closest('tr');
-    const ths = tr.closest('table').querySelectorAll('th');
     const tds = tr.querySelectorAll('td[contenteditable="true"]');
     
     const payload = {};
-    tds.forEach((td, idx) => {
-        const colName = ths[idx].innerText.trim();
+    tds.forEach((td) => {
+        const colName = td.getAttribute('data-col') || td.closest('table').querySelectorAll('th')[td.cellIndex].innerText.trim();
         let val = td.innerText.trim();
         if (val.toLowerCase() === 'true') val = true;
         else if (val.toLowerCase() === 'false') val = false;
@@ -92,7 +90,10 @@ async function saveStaffRow(id, btnEl) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        if (res.ok) loadStaff();
+        if (res.ok) {
+            alert("Staff saved successfully!");
+            loadStaff();
+        }
     } catch (e) { console.error(e); }
 }
 

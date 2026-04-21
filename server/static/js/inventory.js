@@ -1,7 +1,6 @@
 let inventoryData = [];
 let inventoryCols = [];
 
-// Helper to clean up DB keys for display
 function formatHeader(str) {
     return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
@@ -38,17 +37,14 @@ function renderInventoryTable() {
             <thead style="background: #333; color: #d7ba7d;">
                 <tr>`;
     
-    // Display clean headers
     inventoryCols.forEach((col) => {
         html += `<th style="padding: 8px; border: 1px solid #555; white-space: nowrap;">${formatHeader(col)}</th>`;
     });
     html += `<th style="padding: 8px; border: 1px solid #555;">Actions</th></tr></thead><tbody>`;
     
-    // Group items by category
     const categories = [...new Set(inventoryData.map(item => item.category || 'Uncategorized'))].sort();
 
     categories.forEach(cat => {
-        // Add Category Header Row
         html += `<tr style="background-color: #444;">
                     <td colspan="${inventoryCols.length + 1}" style="padding: 10px; font-weight: bold; color: #d7ba7d; border: 1px solid #555; text-transform: uppercase;">
                         Category: ${cat}
@@ -61,7 +57,6 @@ function renderInventoryTable() {
             html += `<tr id="inv_row_${row._id || 'new_' + rowIndex}">`;
             inventoryCols.forEach(col => {
                 let val = row[col] !== undefined && row[col] !== null ? row[col] : '';
-                // Decouple data display from the JSON key via data-col attribute
                 html += `<td contenteditable="true" data-col="${col}" style="padding: 8px; border: 1px solid #444; background: #222; color: #fff;">${val}</td>`;
             });
             html += `<td style="padding: 8px; border: 1px solid #444; background: #222; white-space: nowrap;">
@@ -86,7 +81,7 @@ async function saveInventoryRow(id, btnEl) {
     
     const payload = {};
     tds.forEach((td) => {
-        const colName = td.getAttribute('data-col'); // Use raw DB key
+        const colName = td.getAttribute('data-col');
         let val = td.innerText.trim();
         if (val.toLowerCase() === 'true') val = true;
         else if (val.toLowerCase() === 'false') val = false;
@@ -103,7 +98,10 @@ async function saveInventoryRow(id, btnEl) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        if (res.ok) loadInventory();
+        if (res.ok) {
+            alert("Inventory saved successfully!");
+            loadInventory();
+        }
     } catch (e) { console.error(e); }
 }
 
