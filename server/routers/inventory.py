@@ -1,137 +1,55 @@
 import csv
-import math
+from typing import Dict, Any
 from fastapi import APIRouter
 from bson.objectid import ObjectId
-
-from models import InventoryItem
 from database import db
 
 router = APIRouter()
 
-# Global list to capture decorative headers dynamically
-inventory_csv_headers = []
-
-
-def clean_inventory_csv() -> list:
-    global inventory_csv_headers
-    items = []
-    inventory_csv_headers.clear()
-    try:
-        with open("inventory.csv", "r", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if not row or all(cell.strip() == "" for cell in row):
-                    continue
-                
-                is_data_row = False
-                if len(row) >= 18 and row[0].strip():
-                    try:
-                        float(row[3].strip())
-                        float(row[4].strip())
-                        is_data_row = True
-                    except ValueError:
-                        is_data_row = False
-                
-                if is_data_row:
-                    try:
-                        # Mapping matches 18-column structure in provided CSV
-                        items.append({
-                            "category": row[0].strip(),
-                            "item_name": row[1].strip(),
-                            "order_unit": row[2].strip(),
-                            "bottles_per_order_unit": int(float(row[3].strip() or 1)),
-                            "unit_cost_copper": float(row[4].strip() or 0),
-                            "servings_per_bottle": int(float(row[9].strip() or 1)),
-                            "serve_size": str(row[8].strip()),
-                            "cost_per_serving_copper": float(row[10].strip() or 0),
-                            "sell_price_serving_copper": float(row[11].strip() or 0),
-                            "sell_price_bottle_copper": float(row[6].strip() or 0),
-                            "margin_serving_copper": float(row[12].strip() or 0),
-                            "stock_bottle_quantity": float(row[13].strip() or 0),
-                            "target_restock_bottles": int(float(row[14].strip() or 0)),
-                            "reorder_level_bottles": int(float(row[15].strip() or 0)),
-                            "status": row[16].strip() if len(row) > 16 else "OK",
-                            "reorder_quantity_units": int(float(row[17].strip() or 0))
-                        })
-                    except (ValueError, IndexError) as e:
-                        print(f"Skipping row due to mapping error: {row}. Error: {e}")
-                else:
-                    inventory_csv_headers.append(row)
-    except Exception as e:
-        print(f"CSV Load Error: {e}")
-    return items
-
-
-def sync_inventory_to_csv() -> None:
-    items = list(db.inventory.find({}, {"_id": 0}))
+def sync_collection_to_csv(collection_obj, filepath: str) -> None:
+    items = list(collection_obj.find({}, {"_id": 0}))
     if not items:
+        with open(filepath, "w", newline="", encoding="utf-8") as f:
+            f.write("")
         return
-    
-    with open("inventory.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
         
-        if inventory_csv_headers:
-            for header_row in inventory_csv_headers:
-                writer.writerow(header_row)
-        else:
-            writer.writerow([
-                "CATEGORY", "ITEM", "UNIT NAME", "BOTTLES PER ORDER UNIT", 
-                "COST IN COPPER", "CALCULATED UNIT COST", "SELL PRICE PER BOTTLE", 
-                "BOTTLE MARGIN", "SERVING SIZE", "SERVINGS PER BOTTLE", 
-                "CALCULATED SERVE COST", "SELL PRICE PER SERVING", "SERVING MARGIN", 
-                "CURRENT STOCK ( IN BOTTLES)", "TARGET RESTOCK LEVEL", 
-                "REORDER LEVEL ( IN BOTTLES )", "STATUS", "REORDER QUANTITY"
-            ])
-            
-        items.sort(key=lambda x: (x.get("category", ""), x.get("item_name", "")))
+    keys = []
+    for item in items:
+        for k in item.keys():
+            if k not in keys:
+                keys.append(k)
+                
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
         for item in items:
-            cost_per_bottle = item.get("unit_cost_copper", 0) / max(item.get("bottles_per_order_unit", 1), 1)
-            bottle_margin = item.get("sell_price_bottle_copper", 0) - cost_per_bottle
-            
-            writer.writerow([
-                item.get("category", ""),
-                item.get("item_name", ""),
-                item.get("order_unit", ""),
-                item.get("bottles_per_order_unit", 1),
-                item.get("unit_cost_copper", 0.0),
-                cost_per_bottle,
-                item.get("sell_price_bottle_copper", 0.0),
-                bottle_margin,
-                str(item.get("serve_size", "")),
-                item.get("servings_per_bottle", 1),
-                item.get("cost_per_serving_copper", 0.0),
-                item.get("sell_price_serving_copper", 0.0),
-                item.get("margin_serving_copper", 0.0),
-                item.get("stock_bottle_quantity", 0.0),
-                item.get("target_restock_bottles", 0),
-                item.get("reorder_level_bottles", 0),
-                item.get("status", "OK"),
-                item.get("reorder_quantity_units", 0)
-            ])
-
-
-@router.get("/api/inventory/sync")
-def trigger_inventory_sync():
-    items = clean_inventory_csv()
-    if items:
-        db.inventory.delete_many({})
-        db.inventory.insert_many(items)
-        return {"status": "Inventory re-synced from local CSV successfully.", "count": len(items)}
-    return {"status": "No items found to sync."}
-
+            writer.writerow(item)
 
 @router.get("/api/inventory")
 def get_inventory():
-    inventory_cursor = db.inventory.find()
-    inventory_list = []
-    for item in inventory_cursor:
+    cursor = db.inventory.find()
+    data_list = []
+    for item in cursor:
         item["_id"] = str(item["_id"])
-        inventory_list.append(item)
-    return inventory_list
+        data_list.append(item)
+    return data_list
 
+@router.post("/api/inventory")
+def create_inventory(item: Dict[str, Any]):
+    item.pop("_id", None)
+    result = db.inventory.insert_one(item)
+    sync_collection_to_csv(db.inventory, "inventory.csv")
+    return {"status": "Created", "id": str(result.inserted_id)}
 
 @router.put("/api/inventory/{item_id}")
-def update_inventory(item_id: str, item: InventoryItem):
-    db.inventory.update_one({"_id": ObjectId(item_id)}, {"$set": item.dict()})
-    sync_inventory_to_csv()
+def update_inventory(item_id: str, item: Dict[str, Any]):
+    item.pop("_id", None)
+    db.inventory.update_one({"_id": ObjectId(item_id)}, {"$set": item})
+    sync_collection_to_csv(db.inventory, "inventory.csv")
     return {"status": "Updated"}
+
+@router.delete("/api/inventory/{item_id}")
+def delete_inventory(item_id: str):
+    db.inventory.delete_one({"_id": ObjectId(item_id)})
+    sync_collection_to_csv(db.inventory, "inventory.csv")
+    return {"status": "Deleted"}

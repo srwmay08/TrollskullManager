@@ -290,7 +290,7 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
         db.sales.insert_one(sale.dict())
         inv_item = db.inventory.find_one({"item_name": sale.original_item_name})
         if inv_item:
-            new_stock: float = max(0, inv_item["stock_bottle_quantity"] - sale.stock_deduction)
+            new_stock: float = max(0, inv_item.get("stock_bottle_quantity", 0) - sale.stock_deduction)
             db.inventory.update_one({"_id": inv_item["_id"]}, {"$set": {"stock_bottle_quantity": new_stock}})
 
     if total_income > 0:
@@ -321,7 +321,7 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
             total_order_cost_gp: float = (units_to_order * inv.get("unit_cost_copper", 0.0)) / 100.0
             
             db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {"stock_bottle_quantity": items_received}})
-            desc: str = f"Auto-Restock: {units_to_order}x {inv.get('order_unit', 'Unit')} of {inv['item_name']}"
+            desc: str = f"Auto-Restock: {units_to_order}x {inv.get('order_unit', 'Unit')} of {inv.get('item_name', 'Unknown Item')}"
             db.ledger.insert_one({
                 "entry_type": "Expense", 
                 "description": desc, 
@@ -337,7 +337,7 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
         for staff in staff_cursor:
             wage: float = staff.get("wage", 0.0)
             if wage > 0:
-                desc = f"Payroll: {staff.get('name')} ({staff.get('role', 'Staff')})"
+                desc = f"Payroll: {staff.get('name', 'Unknown Staff')} ({staff.get('role', 'Staff')})"
                 db.ledger.insert_one({
                     "entry_type": "Expense",
                     "description": desc,
@@ -345,10 +345,10 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
                     "frequency": "Once",
                     "entry_date": date_str
                 })
-                payroll_messages.append(f"Paid {wage} gp to {staff.get('name')}")
+                payroll_messages.append(f"Paid {wage} gp to {staff.get('name', 'Unknown Staff')}")
 
-    from routers.inventory import sync_inventory_to_csv
-    sync_inventory_to_csv()
+    from routers.inventory import sync_collection_to_csv
+    sync_collection_to_csv(db.inventory, "inventory.csv")
     
     return {
         "status": "Day Saved Successfully", 

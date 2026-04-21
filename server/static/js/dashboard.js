@@ -1,8 +1,30 @@
-let currentDayData = null; // Holds the global state of the generated day
+let currentDayData = null; 
+
+// Fetch current staff bonuses and display them on the dashboard
+async function fetchStaffBonusDisplay() {
+    try {
+        const res = await fetch('/api/staff');
+        if (!res.ok) return;
+        const staff = await res.json();
+        // Sum up bonuses from staff array
+        const totalBonus = staff.reduce((sum, s) => sum + (parseInt(s.bonus) || 0), 0);
+        const bonusInput = document.getElementById('staff_bonus');
+        if (bonusInput) bonusInput.value = totalBonus;
+    } catch (e) {
+        console.error("Could not fetch staff bonus for dashboard.", e);
+    }
+}
+
+// Call this when the dashboard loads to keep the field updated
+document.addEventListener('DOMContentLoaded', fetchStaffBonusDisplay);
 
 async function rollOutcome() {
-    // Gather inputs matching the exact IDs in your index.html
-    const baseRoll = parseInt(document.getElementById('base_roll').value) || 0;
+    const baseInput = parseInt(document.getElementById('base_roll').value) || 0;
+    const randomInput = parseInt(document.getElementById('random_roll').value) || 0;
+    
+    // Combine base and random roll seamlessly for the backend calculation
+    const calculatedBaseRoll = baseInput + randomInput;
+
     const renownBonus = parseInt(document.getElementById('renown_bonus').value) || 0;
     const envBonus = parseInt(document.getElementById('env_bonus').value) || 0;
     const priceStrategy = document.getElementById('price_strategy').value || "Standard";
@@ -10,14 +32,13 @@ async function rollOutcome() {
     const closeHour = parseInt(document.getElementById('close_hour').value) || 24;
     const isClosed = document.getElementById('is_closed').checked;
 
-    // Grab the global Harptos date if it exists in your globals.js
     let currentDate = null;
     if (typeof window.harptos_state !== 'undefined') {
         currentDate = window.harptos_state;
     }
 
     const payload = {
-        base_roll: baseRoll,
+        base_roll: calculatedBaseRoll,
         renown_bonus: renownBonus,
         environmental_bonus: envBonus,
         current_date: currentDate,
@@ -39,7 +60,6 @@ async function rollOutcome() {
             return;
         }
 
-        // Save to global state and render
         currentDayData = await response.json();
         renderDashboardOutcome(currentDayData);
 
@@ -57,18 +77,12 @@ function renderDashboardOutcome(data) {
         document.getElementById('out-profit').innerText = "0.00 gp";
         document.getElementById('out-sales').innerHTML = "<p>Tavern was closed today.</p>";
         document.getElementById('out-npc-hourly').innerHTML = "";
-        
-        // Ensure the third column is visible in case it was hidden previously
-        document.getElementById('out-receipts').parentElement.style.display = 'block';
-        document.getElementById('out-npc-hourly').parentElement.style.flex = '1';
         return;
     }
 
-    // 1. Update Financial Summary
     document.getElementById('out-gross').innerText = parseFloat(data.total_gross).toFixed(2) + " gp";
     document.getElementById('out-profit').innerText = parseFloat(data.total_profit).toFixed(2) + " gp";
 
-    // 2. Render Items Depleted (Consolidated Sales)
     let salesHtml = `
         <table style="width:100%; text-align:left; border-collapse: collapse; font-size: 0.9rem;">
             <thead>
@@ -91,7 +105,6 @@ function renderDashboardOutcome(data) {
     salesHtml += `</tbody></table>`;
     document.getElementById('out-sales').innerHTML = salesHtml;
 
-    // 3. Render Expandable Hourly Blocks
     const receiptsByHour = {};
     (data.receipts || []).forEach(r => {
         if (!receiptsByHour[r.hour]) receiptsByHour[r.hour] = [];
@@ -100,7 +113,6 @@ function renderDashboardOutcome(data) {
 
     let hourlyHtml = `<div style="display:flex; flex-direction:column; gap:10px;">`;
     
-    // Add Daily Events Block at the top if there are any events
     if (data.daily_events && data.daily_events.length > 0) {
         hourlyHtml += `
         <div style="border: 1px solid #856404; background: #fff3cd; border-radius: 4px; padding: 12px; margin-bottom: 10px;">
@@ -118,14 +130,12 @@ function renderDashboardOutcome(data) {
 
         hourlyHtml += `
         <div style="border: 1px solid #444; background: #222; border-radius: 4px; overflow: hidden;">
-            
             <div onclick="toggleHour('${safeId}')" style="padding: 12px; cursor: pointer; background: #333; display: flex; justify-content: space-between; align-items: center; user-select: none;">
                 <span style="font-size: 1.1rem;"><strong style="color: #d7ba7d;">${hour}</strong> &mdash; ${patrons.length} Patrons</span>
                 <span id="icon-${safeId}" style="color: #aaa;">▶</span>
             </div>
             
             <div id="${safeId}" style="display: none; padding: 15px; border-top: 1px solid #444; background: #1a1a1a;">
-                
                 <h4 style="margin-top:0; color:#bbb; font-size: 0.9rem;">Present in Tavern</h4>
                 <div style="font-size: 0.85rem; color:#ccc; margin-bottom: 15px; line-height: 1.4;">
                     ${patrons.length > 0 ? patrons.join(', ') : 'Empty.'}
@@ -151,16 +161,12 @@ function renderDashboardOutcome(data) {
                         </div>
                     `).join('') : '<div style="font-size:0.85rem; color:#666;">No purchases this hour.</div>'}
                 </div>
-                
             </div>
         </div>`;
     });
     
     hourlyHtml += `</div>`;
     document.getElementById('out-npc-hourly').innerHTML = hourlyHtml;
-    
-    document.getElementById('out-receipts').parentElement.style.display = 'none';
-    document.getElementById('out-npc-hourly').parentElement.style.flex = '2.5';
 }
 
 function toggleHour(blockId) {
@@ -170,28 +176,24 @@ function toggleHour(blockId) {
     
     const isHidden = content.style.display === 'none';
     content.style.display = isHidden ? 'block' : 'none';
-    
-    if(icon) {
-        icon.innerText = isHidden ? '▼' : '▶';
-    }
+    if(icon) icon.innerText = isHidden ? '▼' : '▶';
 }
 
-// Tied to the top bar button: <button onclick="saveDay()">
 async function saveDay() {
     if (!currentDayData) {
         alert("Please generate a day first before attempting to save.");
         return;
     }
 
-    // Try to grab the date currently shown in your top bar
-    let dateStr = "Current Day";
-    const displayEl = document.getElementById('global_date_display');
-    if (displayEl && displayEl.innerText) {
-        dateStr = displayEl.innerText;
+    // Rely securely on Harptos directly for the Ledger
+    let dateStr = "Unknown Date";
+    if (typeof window.getFormattedDate === 'function') {
+        dateStr = window.getFormattedDate();
+    } else {
+        const displayEl = document.getElementById('global_date_display');
+        if (displayEl && displayEl.innerText) dateStr = displayEl.innerText;
     }
 
-    // CRITICAL FIX: The Pydantic SaleItem model strictly requires a 'sale_date'. 
-    // We map over the sales and inject the dateStr into each one.
     const validSales = (currentDayData.auto_sales || []).map(sale => {
         return {
             item_name: sale.item_name,
@@ -199,7 +201,7 @@ async function saveDay() {
             quantity: sale.quantity,
             stock_deduction: sale.stock_deduction,
             total_price: sale.total_price,
-            sale_date: dateStr // Injected to pass backend validation
+            sale_date: dateStr 
         };
     });
 
@@ -207,7 +209,7 @@ async function saveDay() {
         calendar_date: dateStr,
         sales: validSales,
         is_closed: currentDayData.is_closed || false,
-        pay_wages: true // Hardcoded to true so staff get paid when day is saved
+        pay_wages: true 
     };
 
     try {
@@ -218,17 +220,14 @@ async function saveDay() {
         });
 
         if (response.ok) {
-            alert("Day successfully saved to Ledger! Inventory and Payroll have been updated.");
-            
-            // Clear out the state to prevent double clicking/saving
+            alert("Day successfully saved to Ledger!");
             currentDayData = null;
             document.getElementById('outcome-result').style.display = 'none';
             
-            // If the UI has loaded other scripts, reload them seamlessly
             if (typeof loadLedger === 'function') loadLedger();
             if (typeof loadInventory === 'function') loadInventory();
         } else {
-            alert("Failed to save the day. Check backend validation errors.");
+            alert("Failed to save the day.");
         }
     } catch (err) {
         console.error("Save Error:", err);
