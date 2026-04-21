@@ -46,12 +46,18 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
             "receipts": [], 
             "hourly_feedback": {}, 
             "total_gross": 0.0, 
-            "total_profit": 0.0, 
+            "total_profit": 0.0,
+            "daily_events": [],
             "is_closed": True
         }
 
-    staff_cursor = db.staff.find()
+    staff_cursor = list(db.staff.find())
+    
+    # Calculate specialized staff impacts
     total_staff_bonus: int = sum(staff.get("bonus", 0) for staff in staff_cursor)
+    entertainer_active: bool = any(staff.get("role") == "Entertainer" for staff in staff_cursor)
+    bouncer_active: bool = any(staff.get("role") == "Bouncer" for staff in staff_cursor)
+
     total_roll: int = request.base_roll + total_staff_bonus + request.renown_bonus + request.environmental_bonus
     
     demand_multiplier: float = 1.0
@@ -94,6 +100,10 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
         total_expected_patrons = int(total_expected_patrons * 0.4)
         allowed_lifestyles = ["Wealthy", "Aristocratic"]
 
+    # Entertainers bypass the usual strategy constraints to bring in wealthier patrons
+    if entertainer_active and "Comfortable" not in allowed_lifestyles:
+        allowed_lifestyles.append("Comfortable")
+
     all_npcs: List[Dict[str, Any]] = list(db.npcs.find())
     if not all_npcs:
         all_npcs = get_fallback_npcs()
@@ -120,9 +130,11 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
     customer_receipts: List[Dict[str, Any]] = []
     consolidated_sales: Dict[str, Any] = {}
     hourly_feedback: Dict[str, Any] = {}
+    triggered_events: List[str] = []
     
     total_gross_sales: float = 0.0
     total_cost_of_goods: float = 0.0
+    breakage_costs: float = 0.0
 
     for current_hour_idx, hr_val in enumerate(hours_range):
         hr_label: str = f"{hr_val}:00"
@@ -137,6 +149,23 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
             customer_name: str = f"{visitor.get('first_name', '')} {visitor.get('last_name', '')}".strip()
             lifestyle: str = visitor.get("lifestyle", "Modest")
             
+            # Quest / Narrative Hook Trigger
+            if visitor.get("is_quest_giver") and visitor.get("quest_hook_text"):
+                trigger_chance = visitor.get("quest_trigger_chance", 0.05)
+                if random.random() <= trigger_chance:
+                    hook = f"{hr_label} - EVENT: {customer_name} has arrived. {visitor.get('quest_hook_text')}"
+                    if hook not in triggered_events:
+                        triggered_events.append(hook)
+
+            # Dive bar rowdiness mechanic
+            if strategy == "Dive" and random.random() < 0.02:
+                if bouncer_active:
+                    triggered_events.append(f"{hr_label} - Bouncer prevented a brawl involving {customer_name}.")
+                else:
+                    breakage_penalty = random.uniform(1.0, 5.0)
+                    breakage_costs += breakage_penalty
+                    triggered_events.append(f"{hr_label} - A brawl broke out near {customer_name}. {round(breakage_penalty, 2)} gp in damages.")
+
             active_patrons.append({
                 "name": customer_name,
                 "departure_idx": current_hour_idx + duration
@@ -227,7 +256,7 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
             "inv_id": data["id"]
         })
 
-    total_profit: float = total_gross_sales - total_cost_of_goods
+    total_profit: float = total_gross_sales - total_cost_of_goods - breakage_costs
 
     return {
         "total_roll": total_roll, 
@@ -236,6 +265,7 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
         "hourly_feedback": hourly_feedback, 
         "total_gross": round(total_gross_sales, 2),
         "total_profit": round(total_profit, 2),
+        "daily_events": triggered_events,
         "is_closed": False
     }
 
@@ -252,7 +282,7 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
             "entry_date": date_str
         }
         db.ledger.insert_one(closed_entry)
-        return {"status": "Day Saved (Closed)", "restocks": []}
+        return {"status": "Day Saved (Closed)", "restocks": [], "payroll": []}
 
     total_income: float = 0.0
     for sale in request.sales:
@@ -301,7 +331,27 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
             })
             restock_messages.append(f"{desc} (Cost: {total_order_cost_gp} gp)")
 
+    payroll_messages: List[str] = []
+    if request.pay_wages:
+        staff_cursor = db.staff.find()
+        for staff in staff_cursor:
+            wage: float = staff.get("wage", 0.0)
+            if wage > 0:
+                desc = f"Payroll: {staff.get('name')} ({staff.get('role', 'Staff')})"
+                db.ledger.insert_one({
+                    "entry_type": "Expense",
+                    "description": desc,
+                    "amount": wage,
+                    "frequency": "Once",
+                    "entry_date": date_str
+                })
+                payroll_messages.append(f"Paid {wage} gp to {staff.get('name')}")
+
     from routers.inventory import sync_inventory_to_csv
     sync_inventory_to_csv()
     
-    return {"status": "Day Saved Successfully", "restocks": restock_messages}
+    return {
+        "status": "Day Saved Successfully", 
+        "restocks": restock_messages,
+        "payroll": payroll_messages
+    }

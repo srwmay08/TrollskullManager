@@ -27,7 +27,7 @@ class SaleItem(BaseModel):
     item_name: str
     original_item_name: str
     quantity: int
-    stock_deduction: float  # Changed to float for fractional bottle deductions
+    stock_deduction: float
     total_price: float
     sale_date: str
     serve_size: Optional[str] = None
@@ -62,6 +62,7 @@ class LedgerEntry(BaseModel):
 
 class StaffItem(BaseModel):
     name: str
+    role: str = "General"
     wage: float
     frequency: str
     bonus: int
@@ -71,6 +72,7 @@ class SaveDayRequest(BaseModel):
     calendar_date: str
     sales: List[SaleItem]
     is_closed: bool = False
+    pay_wages: bool = False
 
 
 class NpcItem(BaseModel):
@@ -86,3 +88,6 @@ class NpcItem(BaseModel):
     noble_house: str
     story_connection: str
     pc_affiliation: str
+    is_quest_giver: bool = False
+    quest_trigger_chance: float = 0.0
+    quest_hook_text: Optional[str] = None

@@ -92,7 +92,6 @@ function renderDashboardOutcome(data) {
     document.getElementById('out-sales').innerHTML = salesHtml;
 
     // 3. Render Expandable Hourly Blocks
-    // We sort the receipts by hour so we can inject them into the specific hour's accordion
     const receiptsByHour = {};
     (data.receipts || []).forEach(r => {
         if (!receiptsByHour[r.hour]) receiptsByHour[r.hour] = [];
@@ -101,6 +100,17 @@ function renderDashboardOutcome(data) {
 
     let hourlyHtml = `<div style="display:flex; flex-direction:column; gap:10px;">`;
     
+    // Add Daily Events Block at the top if there are any events
+    if (data.daily_events && data.daily_events.length > 0) {
+        hourlyHtml += `
+        <div style="border: 1px solid #856404; background: #fff3cd; border-radius: 4px; padding: 12px; margin-bottom: 10px;">
+            <h4 style="margin-top:0; color: #856404; font-size: 1rem;">Daily Events & Hooks</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 0.9rem;">
+                ${data.daily_events.map(e => `<li>${e}</li>`).join('')}
+            </ul>
+        </div>`;
+    }
+
     Object.keys(data.hourly_feedback || {}).forEach((hour, idx) => {
         const patrons = data.hourly_feedback[hour] || [];
         const hourReceipts = receiptsByHour[hour] || [];
@@ -149,8 +159,6 @@ function renderDashboardOutcome(data) {
     hourlyHtml += `</div>`;
     document.getElementById('out-npc-hourly').innerHTML = hourlyHtml;
     
-    // UI Layout Trick: We integrated receipts into the hourly block to fulfill your request.
-    // So we hide the redundant 3rd column, and stretch the middle column to fit the wider blocks beautifully.
     document.getElementById('out-receipts').parentElement.style.display = 'none';
     document.getElementById('out-npc-hourly').parentElement.style.flex = '2.5';
 }
@@ -182,10 +190,24 @@ async function saveDay() {
         dateStr = displayEl.innerText;
     }
 
+    // CRITICAL FIX: The Pydantic SaleItem model strictly requires a 'sale_date'. 
+    // We map over the sales and inject the dateStr into each one.
+    const validSales = (currentDayData.auto_sales || []).map(sale => {
+        return {
+            item_name: sale.item_name,
+            original_item_name: sale.original_item_name,
+            quantity: sale.quantity,
+            stock_deduction: sale.stock_deduction,
+            total_price: sale.total_price,
+            sale_date: dateStr // Injected to pass backend validation
+        };
+    });
+
     const payload = {
         calendar_date: dateStr,
-        sales: currentDayData.auto_sales || [],
-        is_closed: currentDayData.is_closed || false
+        sales: validSales,
+        is_closed: currentDayData.is_closed || false,
+        pay_wages: true // Hardcoded to true so staff get paid when day is saved
     };
 
     try {
@@ -196,7 +218,7 @@ async function saveDay() {
         });
 
         if (response.ok) {
-            alert("Day successfully saved to Ledger! Inventory has been updated.");
+            alert("Day successfully saved to Ledger! Inventory and Payroll have been updated.");
             
             // Clear out the state to prevent double clicking/saving
             currentDayData = null;
@@ -206,7 +228,7 @@ async function saveDay() {
             if (typeof loadLedger === 'function') loadLedger();
             if (typeof loadInventory === 'function') loadInventory();
         } else {
-            alert("Failed to save the day.");
+            alert("Failed to save the day. Check backend validation errors.");
         }
     } catch (err) {
         console.error("Save Error:", err);

@@ -7,12 +7,16 @@ from database import db
 
 router = APIRouter()
 
-
 def sync_npcs_to_csv() -> None:
     items = list(db.npcs.find({}, {"_id": 0}))
     if not items:
         return
-    keys = ["First Name", "Last Name", "Occupation", "Lifestyle", "Faction", "Age", "Bar Disposition", "Party Disposition", "Nobility Status", "Noble House", "Story Connection", "PC Affiliation"]
+    keys = [
+        "First Name", "Last Name", "Occupation", "Lifestyle", "Faction", 
+        "Age", "Bar Disposition", "Party Disposition", "Nobility Status", 
+        "Noble House", "Story Connection", "PC Affiliation", 
+        "Is Quest Giver", "Quest Trigger Chance", "Quest Hook Text"
+    ]
     with open("npcs.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
@@ -29,9 +33,11 @@ def sync_npcs_to_csv() -> None:
                 "Nobility Status": item.get("nobility_status", ""),
                 "Noble House": item.get("noble_house", ""),
                 "Story Connection": item.get("story_connection", ""),
-                "PC Affiliation": item.get("pc_affiliation", "")
+                "PC Affiliation": item.get("pc_affiliation", ""),
+                "Is Quest Giver": item.get("is_quest_giver", False),
+                "Quest Trigger Chance": item.get("quest_trigger_chance", 0.0),
+                "Quest Hook Text": item.get("quest_hook_text", "")
             })
-
 
 @router.get("/api/npcs")
 def get_npcs():
@@ -41,7 +47,6 @@ def get_npcs():
         item["_id"] = str(item["_id"])
         npc_list.append(item)
     return npc_list
-
 
 @router.put("/api/npcs/{item_id}")
 def update_npc(item_id: str, item: NpcItem):
