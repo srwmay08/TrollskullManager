@@ -56,7 +56,10 @@ def seed_from_csv_if_empty():
 
 @router.get("/api/inventory")
 def get_inventory():
+    print("-> API HIT: /api/inventory")  # <--- Add this
     seed_from_csv_if_empty()
+    print("-> CSV SEED CHECK PASSED")    # <--- Add this
+    
     cursor = db.inventory.find()
     data_list = []
     for item in cursor:

@@ -1,15 +1,5 @@
 Name,Role,Wage,Wage Timing,Security_Value,Service_Value
-Cade,Taproom Security,20,Weekly,8,5
-Havik,Operations Manager,20,Weekly,7,6
-Lif,Spectral Bartender,0,Weekly,4,10
-Nat,Alley Lookout / Intelligence,3,Weekly,5,3
-Squiddly,Courier / Busboy,3,Weekly,2,5
-Jenks,Busboy / Apprentice,3,Weekly,2,6
-Spider,Warforged Bartender / Bouncer,0,Daily,9,9
-Myrnd Gundwynd,Heavy Vanguard Bouncer,30,Monthly,10,2
-Istrid Horn,Financial Overseer,8,Weekly,8,4
-Amaryllis Thorne,Discreet Server & Crowd Control,6,Weekly,7,8
-Cade,Taproom Security,20,Weekly,8,5
+Cade,Taproom Security,20,Weekly,5,5
 Havik,Operations Manager,20,Weekly,7,6
 Lif,Spectral Bartender,0,Weekly,4,10
 Nat,Alley Lookout / Intelligence,3,Weekly,5,3

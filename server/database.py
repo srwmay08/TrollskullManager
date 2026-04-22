@@ -1,7 +1,8 @@
 import gspread
 from pymongo import MongoClient
 
-mongo_client = MongoClient("mongodb://localhost:27017/")
+# CHANGE THIS LINE: Use 127.0.0.1 instead of localhost
+mongo_client = MongoClient("mongodb://127.0.0.1:27017/", serverSelectionTimeoutMS=2000)
 db = mongo_client["trollskull_tavern"]
 
 try:
