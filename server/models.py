@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import List
 from typing import Optional
+from typing import Dict
+from typing import Any
 
 class HarptosState(BaseModel):
     month: int
@@ -28,6 +30,7 @@ class SaleItem(BaseModel):
     total_price: float
     sale_date: str
     serve_size: Optional[str] = None
+    total_cost: float = 0.0
 
 class InventoryItem(BaseModel):
     category: str
@@ -67,6 +70,7 @@ class SaveDayRequest(BaseModel):
     sales: List[SaleItem]
     is_closed: bool = False
     pay_wages: bool = False
+    receipts: Optional[List[Dict[str, Any]]] = None
 
 class NpcItem(BaseModel):
     first_name: str

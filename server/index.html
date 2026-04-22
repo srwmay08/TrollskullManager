@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trollskull Tavern Management</title>
     <link rel="stylesheet" href="/static/style.css?v=2">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         table td[contenteditable="true"] {
             cursor: text;
@@ -45,6 +46,7 @@
         <button onclick="switchTab('staff')">STAFF</button>
         <button onclick="switchTab('ledger')">LEDGER</button>
         <button onclick="switchTab('npcs')">NPC DIRECTORY</button>
+        <button onclick="switchTab('analytics')">ANALYTICS</button>
         <button onclick="switchTab('reports')">REPORTS</button>
     </nav>
 
@@ -131,11 +133,34 @@
         <div id="npc-dynamic-container" style="overflow-x: auto; margin-top: 15px;"></div>
     </div>
 
+    <div id="analytics" class="tab-content">
+        <h2>Business Analytics</h2>
+        <button class="save-btn" style="background-color: #007acc; margin-bottom: 15px;" onclick="loadAnalytics()">Refresh Analytics Data</button>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <div style="width: 45%; min-width: 400px; background: #222; padding: 15px; border: 1px solid #444; border-radius: 8px;">
+                <h3 style="margin-top: 0; color: #d7ba7d;">Profit Margin Over Time</h3>
+                <canvas id="profitChart"></canvas>
+            </div>
+            
+            <div style="width: 45%; min-width: 400px; background: #222; padding: 15px; border: 1px solid #444; border-radius: 8px;">
+                <h3 style="margin-top: 0; color: #d7ba7d;">Patron Demographics</h3>
+                <canvas id="lifestyleChart"></canvas>
+            </div>
+
+            <div style="width: 90%; background: #222; padding: 15px; border: 1px solid #444; border-radius: 8px; margin-top: 20px;">
+                <h3 style="margin-top: 0; color: #d7ba7d;">Top Earning Items by Margin vs Volume</h3>
+                <canvas id="itemsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/globals.js?v=4"></script>
     <script src="/static/js/inventory.js?v=4"></script>
     <script src="/static/js/staff.js?v=4"></script>
     <script src="/static/js/npcs.js?v=4"></script>
     <script src="/static/js/ledger.js?v=4"></script>
     <script src="/static/js/dashboard.js?v=4"></script>
+    <script src="/static/js/analytics.js?v=1"></script>
 </body>
 </html>

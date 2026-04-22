@@ -9,6 +9,7 @@ from routers import inventory
 from routers import staff
 from routers import npcs
 from routers import ledger
+from routers import analytics
 
 app = FastAPI()
 
@@ -25,6 +26,7 @@ app.include_router(inventory.router)
 app.include_router(staff.router)
 app.include_router(npcs.router)
 app.include_router(ledger.router)
+app.include_router(analytics.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -33,4 +35,5 @@ def serve_index():
     return FileResponse("index.html")
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Add reload_excludes to ignore the data files!
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, reload_excludes=["*.csv"])

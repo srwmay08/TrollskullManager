@@ -282,12 +282,14 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
                             consolidated_sales[item_label] = {
                                 "qty": 0, 
                                 "total": 0.0, 
+                                "total_cost": 0.0,
                                 "id": str(chosen_item["_id"]),
                                 "original_item_name": chosen_item.get("item_name", "Unknown"),
                                 "stock_deduction": 0.0
                             }
                         consolidated_sales[item_label]["qty"] += 1
                         consolidated_sales[item_label]["total"] += price_in_gp
+                        consolidated_sales[item_label]["total_cost"] += cost_in_gp
                         consolidated_sales[item_label]["stock_deduction"] += stock_deduction
                         
                         affordable_items = [i for i in affordable_items if float(i.get("stock_bottle_quantity", 0)) > 0]
@@ -311,6 +313,7 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
             "quantity": data["qty"], 
             "stock_deduction": data["stock_deduction"],
             "total_price": data["total"], 
+            "total_cost": data["total_cost"],
             "inv_id": data["id"]
         })
 
@@ -406,6 +409,11 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
                 new_stock: float = max(0, float(inv_doc.get(stock_key, 0)) - sale.stock_deduction)
                 db.inventory.update_one({"_id": inv_doc["_id"]}, {"$set": {stock_key: new_stock}})
                 break
+
+    if request.receipts:
+        for receipt in request.receipts:
+            receipt["entry_date"] = date_str
+            db.receipts.insert_one(receipt)
 
     if total_income > 0:
         ledger_income: Dict[str, Any] = {

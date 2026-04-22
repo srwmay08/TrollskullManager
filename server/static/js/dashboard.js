@@ -262,7 +262,8 @@ async function saveDay() {
         calendar_date: dateStr,
         sales: validSales,
         is_closed: currentDayData.is_closed || false,
-        pay_wages: true 
+        pay_wages: true,
+        receipts: currentDayData.receipts || []
     };
 
     try {
