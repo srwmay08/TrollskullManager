@@ -18,7 +18,6 @@ router = APIRouter()
 
 
 def get_fallback_npcs() -> List[Dict[str, Any]]:
-    """Failsafe: If the MongoDB collection is empty, read directly from the CSV."""
     fallback: List[Dict[str, Any]] = []
     try:
         with open("npcs.csv", "r", encoding="utf-8") as f:
@@ -53,26 +52,26 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
 
     staff_cursor = list(db.staff.find())
     
-    # Calculate specialized staff impacts safely
     total_staff_bonus: int = 0
     entertainer_active: bool = False
     bouncer_active: bool = False
     
     for staff in staff_cursor:
-        # Create a lowercase mapping of the keys for dynamic CSV headers
-        staff_keys = {k.lower(): k for k in staff.keys()}
+        staff_keys = {k.lower().strip(): k for k in staff.keys()}
         
-        if "bonus" in staff_keys:
-            try:
-                total_staff_bonus += int(staff[staff_keys["bonus"]])
-            except (ValueError, TypeError):
-                pass
-                
+        # Calculate bonus directly from your new columns
+        for key in staff_keys:
+            if 'service' in key or 'security' in key:
+                try:
+                    total_staff_bonus += int(staff[staff_keys[key]])
+                except (ValueError, TypeError):
+                    pass
+                    
         if "role" in staff_keys:
             role_str = str(staff[staff_keys["role"]]).lower().strip()
-            if role_str == "entertainer":
+            if "entertainer" in role_str:
                 entertainer_active = True
-            elif role_str in ["bouncer", "guard", "security"]:
+            elif any(x in role_str for x in ["bouncer", "guard", "security"]):
                 bouncer_active = True
 
     total_roll: int = request.base_roll + total_staff_bonus + request.renown_bonus + request.environmental_bonus
@@ -117,7 +116,6 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
         total_expected_patrons = int(total_expected_patrons * 0.4)
         allowed_lifestyles = ["Wealthy", "Aristocratic"]
 
-    # Entertainers bypass the usual strategy constraints to bring in wealthier patrons
     if entertainer_active and "Comfortable" not in allowed_lifestyles:
         allowed_lifestyles.append("Comfortable")
 
@@ -164,14 +162,12 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
             visitor: Dict[str, Any] = daily_visitors.pop(0)
             duration: int = random.randint(1, 3)
             
-            # Case-insensitive checks for NPC fields too, just in case
             v_keys = {k.lower(): k for k in visitor.keys()}
             f_name = visitor[v_keys["first_name"]] if "first_name" in v_keys else ""
             l_name = visitor[v_keys["last_name"]] if "last_name" in v_keys else ""
             customer_name: str = f"{f_name} {l_name}".strip()
             lifestyle: str = visitor.get("lifestyle", "Modest")
             
-            # Quest / Narrative Hook Trigger
             if visitor.get("is_quest_giver") and visitor.get("quest_hook_text"):
                 trigger_chance = float(visitor.get("quest_trigger_chance", 0.05))
                 if random.random() <= trigger_chance:
@@ -179,7 +175,6 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
                     if hook not in triggered_events:
                         triggered_events.append(hook)
 
-            # Dive bar rowdiness mechanic
             if strategy == "Dive" and random.random() < 0.02:
                 if bouncer_active:
                     triggered_events.append(f"{hr_label} - Bouncer prevented a brawl involving {customer_name}.")
@@ -311,7 +306,6 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
         total_income += sale.total_price
         db.sales.insert_one(sale.dict())
         
-        # We need a case-insensitive lookup for inventory items too!
         all_inv = list(db.inventory.find())
         for inv_doc in all_inv:
             inv_keys = {k.lower(): k for k in inv_doc.keys()}

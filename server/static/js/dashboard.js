@@ -1,7 +1,7 @@
 let currentDayData = null; 
 let pendingRenownChange = 0;
 
-// Fetch current staff bonuses and split them intelligently
+// Fetch current staff bonuses and map them directly to your new CSV columns
 async function fetchStaffBonusDisplay() {
     try {
         const res = await fetch('/api/staff');
@@ -12,26 +12,22 @@ async function fetchStaffBonusDisplay() {
         let secBonus = 0;
         
         staff.forEach(s => {
-            let bonusVal = 0;
-            let roleStr = '';
+            let tempSrv = 0;
+            let tempSec = 0;
 
-            // Iterate over every key to find 'bonus' and 'role' robustly
             for (const key in s) {
                 const cleanKey = key.toLowerCase().trim();
-                if (cleanKey === 'bonus') {
-                    bonusVal = parseInt(s[key]) || 0;
+                // Explicitly look for your new column names
+                if (cleanKey.includes('service')) {
+                    tempSrv = parseInt(s[key]) || 0;
                 }
-                if (cleanKey === 'role') {
-                    roleStr = String(s[key]).toLowerCase().trim();
+                if (cleanKey.includes('security')) {
+                    tempSec = parseInt(s[key]) || 0;
                 }
             }
             
-            // Bouncers and guards provide security, everyone else provides service
-            if (roleStr.includes('bouncer') || roleStr.includes('guard') || roleStr.includes('security')) {
-                secBonus += bonusVal;
-            } else {
-                srvBonus += bonusVal;
-            }
+            srvBonus += tempSrv;
+            secBonus += tempSec;
         });
         
         const srvInput = document.getElementById('staff_service_bonus');
@@ -50,7 +46,6 @@ window.fetchStaffBonusDisplay = fetchStaffBonusDisplay;
 document.addEventListener('DOMContentLoaded', () => {
     fetchStaffBonusDisplay();
     
-    // Load persistent renown from previous days
     const savedRenown = localStorage.getItem('tavern_renown');
     if (savedRenown !== null) {
         const renownInput = document.getElementById('renown_bonus');
@@ -63,7 +58,6 @@ async function rollOutcome() {
     const serviceRoll = parseInt(document.getElementById('service_roll').value) || 0;
     const securityRoll = parseInt(document.getElementById('security_roll').value) || 0;
     
-    // Total raw dice determines the Ebb and Flow of Renown (Max raw dice is 140)
     const rawDiceTotal = tavernRoll + serviceRoll + securityRoll;
     if (rawDiceTotal >= 110) pendingRenownChange = 3;
     else if (rawDiceTotal >= 95) pendingRenownChange = 2;
@@ -73,9 +67,7 @@ async function rollOutcome() {
     else if (rawDiceTotal <= 40) pendingRenownChange = -1;
     else pendingRenownChange = 0;
 
-    // The backend receives the raw dice sum. (It automatically adds staff bonuses on its end)
     const calculatedBaseRoll = tavernRoll + serviceRoll + securityRoll;
-
     const renownBonus = parseInt(document.getElementById('renown_bonus').value) || 0;
     const envBonus = parseInt(document.getElementById('env_bonus').value) || 0;
     const priceStrategy = document.getElementById('price_strategy').value || "Standard";
@@ -135,7 +127,6 @@ function renderDashboardOutcome(data) {
     document.getElementById('out-gross').innerText = parseFloat(data.total_gross).toFixed(2) + " gp";
     document.getElementById('out-profit').innerText = parseFloat(data.total_profit).toFixed(2) + " gp";
 
-    // Display the calculated Renown Shift
     document.getElementById('out-renown-shift').innerHTML = `
         <div class="summary-box" style="border-color: ${pendingRenownChange > 0 ? '#28a745' : (pendingRenownChange < 0 ? '#dc3545' : '#444')}">
             <h4>Daily Renown Shift</h4>
@@ -284,7 +275,6 @@ async function saveDay() {
         if (response.ok) {
             alert("Day successfully saved to Ledger!");
             
-            // Permanently commit and persist the renown change
             const currentRenown = parseInt(document.getElementById('renown_bonus').value) || 0;
             const newRenown = currentRenown + pendingRenownChange;
             localStorage.setItem('tavern_renown', newRenown);

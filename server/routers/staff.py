@@ -27,7 +27,6 @@ def sync_collection_to_csv(collection_obj, filepath: str) -> None:
             writer.writerow(item)
 
 def seed_from_csv_if_empty():
-    """Reads the CSV and populates the DB if the DB is currently empty."""
     if db.staff.count_documents({}) == 0 and os.path.exists("staff.csv"):
         with open("staff.csv", "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
