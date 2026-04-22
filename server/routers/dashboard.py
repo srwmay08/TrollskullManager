@@ -1,9 +1,11 @@
 import random
 import csv
 import math
+import re
 from typing import Dict
 from typing import List
 from typing import Any
+from typing import Tuple
 
 from fastapi import APIRouter
 
@@ -15,7 +17,6 @@ from database import sales_sheet
 from database import ledger_sheet
 
 router = APIRouter()
-
 
 def get_fallback_npcs() -> List[Dict[str, Any]]:
     fallback: List[Dict[str, Any]] = []
@@ -35,6 +36,47 @@ def get_fallback_npcs() -> List[Dict[str, Any]]:
         fallback = [{"first_name": "Mysterious", "last_name": "Stranger", "lifestyle": "Modest"}]
     return fallback
 
+def get_harptos_date(date_str: str) -> Tuple[int, int, int]:
+    months = [
+        "Hammer", "Alturiak", "Ches", "Tarsakh", "Mirtul", "Kythorn",
+        "Flamerule", "Eleasis", "Eleint", "Marpenoth", "Uktar", "Nightal"
+    ]
+    day = 1
+    year = 1492
+    month_idx = 1
+    
+    year_match = re.search(r'\b(\d{4})\b', date_str)
+    if year_match:
+        year = int(year_match.group(1))
+    
+    clean_str = date_str
+    if year_match:
+        clean_str = clean_str.replace(str(year), '')
+        
+    day_match = re.search(r'\b([1-9]|[12][0-9]|30)\b', clean_str)
+    if day_match:
+        day = int(day_match.group(1))
+        
+    for idx, m in enumerate(months):
+        if m.lower() in date_str.lower():
+            month_idx = idx + 1
+            break
+            
+    return month_idx, day, year
+
+def add_harptos_days(month: int, day: int, year: int, days: int) -> Tuple[int, int, int]:
+    new_day = day + days
+    new_month = month
+    new_year = year
+    
+    while new_day > 30:
+        new_day -= 30
+        new_month += 1
+        if new_month > 12:
+            new_month = 1
+            new_year += 1
+            
+    return new_month, new_day, new_year
 
 @router.post("/api/roll")
 def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
@@ -59,7 +101,6 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
     for staff in staff_cursor:
         staff_keys = {k.lower().strip(): k for k in staff.keys()}
         
-        # Calculate bonus directly from your new columns
         for key in staff_keys:
             if 'service' in key or 'security' in key:
                 try:
@@ -286,10 +327,11 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
         "is_closed": False
     }
 
-
 @router.post("/api/save_day")
 def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
     date_str: str = request.calendar_date
+    c_month, c_day, c_year = get_harptos_date(date_str)
+    
     if request.is_closed:
         closed_entry: Dict[str, Any] = {
             "entry_type": "Expense", 
@@ -300,6 +342,56 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
         }
         db.ledger.insert_one(closed_entry)
         return {"status": "Day Saved (Closed)", "restocks": [], "payroll": []}
+
+    shipment_messages: List[str] = []
+    pending_shipments = list(db.shipments.find({"status": "Pending"}))
+    
+    for shipment in pending_shipments:
+        s_year = int(shipment.get("arrival_year", 1492))
+        s_month = int(shipment.get("arrival_month", 1))
+        s_day = int(shipment.get("arrival_day", 1))
+        
+        is_arrived = False
+        if s_year < c_year:
+            is_arrived = True
+        elif s_year == c_year and s_month < c_month:
+            is_arrived = True
+        elif s_year == c_year and s_month == c_month and s_day <= c_day:
+            is_arrived = True
+            
+        if is_arrived:
+            total_cost = float(shipment.get("total_cost", 0.0))
+            vendor_name = shipment.get("vendor_name", "Unknown Vendor")
+            
+            items_received_list = []
+            for item in shipment.get("items", []):
+                item_name = item.get("item_name")
+                qty = float(item.get("quantity_bottles", 0))
+                
+                if item_name and qty > 0:
+                    db.inventory.update_one(
+                        {"item_name": item_name},
+                        {"$inc": {"stock_bottle_quantity": qty}}
+                    )
+                    items_received_list.append(f"{qty}x {item_name}")
+            
+            desc = f"Delivery Arrived: {vendor_name} (" + ", ".join(items_received_list) + ")"
+            db.ledger.insert_one({
+                "entry_type": "Expense",
+                "description": desc,
+                "amount": total_cost,
+                "frequency": "Once",
+                "entry_date": date_str
+            })
+            
+            if gc is not None and ledger_sheet is not None:
+                try:
+                    ledger_sheet.append_row([date_str, "Expense", desc, total_cost])
+                except Exception:
+                    pass
+                    
+            db.shipments.update_one({"_id": shipment["_id"]}, {"$set": {"status": "Delivered"}})
+            shipment_messages.append(f"Received delivery from {vendor_name} for {round(total_cost, 2)} gp.")
 
     total_income: float = 0.0
     for sale in request.sales:
@@ -329,6 +421,8 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
 
     restock_messages: List[str] = []
     all_inventory: List[Dict[str, Any]] = list(db.inventory.find())
+    orders_by_vendor: Dict[str, List[Dict[str, Any]]] = {}
+    
     for inv in all_inventory:
         inv_keys = {k.lower(): k for k in inv.keys()}
         stock_key = inv_keys.get("stock_bottle_quantity", "stock_bottle_quantity")
@@ -337,30 +431,76 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
         b_per_u_key = inv_keys.get("bottles_per_order_unit", "bottles_per_order_unit")
         cost_key = inv_keys.get("unit_cost_copper", "unit_cost_copper")
         name_key = inv_keys.get("item_name", "item_name")
-        order_unit_key = inv_keys.get("order_unit", "order_unit")
 
         current_stock: float = float(inv.get(stock_key, 0))
         restock_lvl: int = int(inv.get(reorder_key, 0))
         
-        if current_stock <= restock_lvl and restock_lvl > 0:
+        pending_orders = list(db.shipments.find({"status": "Pending", "items.item_name": inv.get(name_key)}))
+        incoming_stock = 0.0
+        for po in pending_orders:
+            for item in po.get("items", []):
+                if item.get("item_name") == inv.get(name_key):
+                    incoming_stock += float(item.get("quantity_bottles", 0))
+                    
+        effective_stock = current_stock + incoming_stock
+        
+        if effective_stock <= restock_lvl and restock_lvl > 0:
             target_stock: int = int(inv.get(target_key, restock_lvl * 3))
             bottles_needed: float = target_stock - current_stock
             bottles_per_unit: int = int(inv.get(b_per_u_key, 1))
             
             units_to_order: int = int(math.ceil(bottles_needed / bottles_per_unit))
             items_received: int = units_to_order * bottles_per_unit
-            total_order_cost_gp: float = (units_to_order * float(inv.get(cost_key, 0.0))) / 100.0
+            base_cost_gp: float = (units_to_order * float(inv.get(cost_key, 0.0))) / 100.0
             
-            db.inventory.update_one({"_id": inv["_id"]}, {"$inc": {stock_key: items_received}})
-            desc: str = f"Auto-Restock: {units_to_order}x {inv.get(order_unit_key, 'Unit')} of {inv.get(name_key, 'Unknown Item')}"
-            db.ledger.insert_one({
-                "entry_type": "Expense", 
-                "description": desc, 
-                "amount": total_order_cost_gp, 
-                "frequency": "Once", 
-                "entry_date": date_str
+            vendor_name = inv.get("vendor_name", "Local Supplier")
+            if not vendor_name:
+                vendor_name = "Local Supplier"
+                
+            if vendor_name not in orders_by_vendor:
+                orders_by_vendor[vendor_name] = []
+                
+            orders_by_vendor[vendor_name].append({
+                "inv": inv,
+                "units": units_to_order,
+                "bottles": items_received,
+                "cost": base_cost_gp
             })
-            restock_messages.append(f"{desc} (Cost: {total_order_cost_gp} gp)")
+            
+    for v_name, items in orders_by_vendor.items():
+        vendor = db.vendors.find_one({"name": v_name})
+        delivery_days = 3
+        holiday_multiplier = 1.0
+        
+        if vendor:
+            delivery_days = int(vendor.get("base_delivery_days", 3))
+            holiday_multiplier = float(vendor.get("holiday_premium_multiplier", 1.0))
+            
+        a_month, a_day, a_year = add_harptos_days(c_month, c_day, c_year, delivery_days)
+        
+        shipment_items = []
+        total_shipment_cost = 0.0
+        
+        for order in items:
+            final_cost = order["cost"] * holiday_multiplier
+            total_shipment_cost += final_cost
+            shipment_items.append({
+                "item_name": order["inv"].get("item_name", "Unknown Item"),
+                "quantity_bottles": order["bottles"],
+                "cost": final_cost
+            })
+            
+        db.shipments.insert_one({
+            "vendor_name": v_name,
+            "items": shipment_items,
+            "arrival_month": a_month,
+            "arrival_day": a_day,
+            "arrival_year": a_year,
+            "total_cost": total_shipment_cost,
+            "status": "Pending"
+        })
+        
+        restock_messages.append(f"Ordered {len(items)} item(s) from {v_name} for {round(total_shipment_cost, 2)} gp. (Arrives: {a_month}/{a_day}/{a_year})")
 
     payroll_messages: List[str] = []
     if request.pay_wages:
@@ -388,6 +528,6 @@ def save_day_data(request: SaveDayRequest) -> Dict[str, Any]:
     
     return {
         "status": "Day Saved Successfully", 
-        "restocks": restock_messages,
+        "restocks": shipment_messages + restock_messages,
         "payroll": payroll_messages
     }

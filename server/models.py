@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import List
 from typing import Optional
 
-
 class HarptosState(BaseModel):
     month: int
     day: int
@@ -10,7 +9,6 @@ class HarptosState(BaseModel):
     is_holiday: bool = False
     holiday_name: Optional[str] = None
     is_shieldmeet: bool = False
-
 
 class RollRequest(BaseModel):
     base_roll: int
@@ -22,7 +20,6 @@ class RollRequest(BaseModel):
     close_hour: int = 24
     is_closed: bool = False
 
-
 class SaleItem(BaseModel):
     item_name: str
     original_item_name: str
@@ -31,7 +28,6 @@ class SaleItem(BaseModel):
     total_price: float
     sale_date: str
     serve_size: Optional[str] = None
-
 
 class InventoryItem(BaseModel):
     category: str
@@ -50,7 +46,7 @@ class InventoryItem(BaseModel):
     target_restock_bottles: int
     status: str
     reorder_quantity_units: int
-
+    vendor_name: Optional[str] = None
 
 class LedgerEntry(BaseModel):
     entry_type: str
@@ -59,7 +55,6 @@ class LedgerEntry(BaseModel):
     frequency: str
     entry_date: str
 
-
 class StaffItem(BaseModel):
     name: str
     role: str = "General"
@@ -67,13 +62,11 @@ class StaffItem(BaseModel):
     frequency: str
     bonus: int
 
-
 class SaveDayRequest(BaseModel):
     calendar_date: str
     sales: List[SaleItem]
     is_closed: bool = False
     pay_wages: bool = False
-
 
 class NpcItem(BaseModel):
     first_name: str
@@ -91,3 +84,23 @@ class NpcItem(BaseModel):
     is_quest_giver: bool = False
     quest_trigger_chance: float = 0.0
     quest_hook_text: Optional[str] = None
+
+class Vendor(BaseModel):
+    name: str
+    base_delivery_days: int
+    unavailable_seasons: List[str] = []
+    holiday_premium_multiplier: float = 1.0
+
+class PendingShipmentItem(BaseModel):
+    item_name: str
+    quantity_bottles: float
+    cost: float
+
+class PendingShipment(BaseModel):
+    vendor_name: str
+    items: List[PendingShipmentItem]
+    arrival_month: int
+    arrival_day: int
+    arrival_year: int
+    total_cost: float
+    status: str = "Pending"
