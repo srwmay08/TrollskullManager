@@ -30,11 +30,45 @@
 </head>
 <body>
 
-    <div id="top-bar">
-        <h1 style="margin:0; font-size: 24px;">Trollskull Manor</h1>
+<div id="top-bar">
+        <h1 style="margin:0; font-size: 24px; min-width: 200px;">Trollskull Manor</h1>
+        
+        <div class="header-operations">
+            <span style="color: #aaa; font-size: 12px; text-transform: uppercase;">Operations:</span>
+            <label>Open: <input type="number" id="open_hour" value="12" min="0" max="23"></label>
+            <label>Close: <input type="number" id="close_hour" value="24" min="1" max="24"></label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="is_closed"> Close for Day
+            </label>
+        </div>
+
         <div class="top-right-controls">
-            <label style="margin:0;">Current Date:</label>
-            <span style="font-weight: bold; color: #d7ba7d; margin-right: 15px;" id="global_date_display"></span>
+            <div class="calendar-widget" id="calendar-widget">
+                <div id="global_date_display" onclick="toggleCalendar()"></div>
+                
+                <div id="calendar-popover" class="hidden">
+                    <div class="calendar-header">
+                        <button class="cal-btn" onclick="toggleYearView()">◷ Year View</button>
+                        <div id="cal-month-title" style="font-weight: bold; color: #d7ba7d; font-size: 1.1em;"></div>
+                        <div style="width: 80px;"></div> </div>
+                    
+                    <div id="cal-month-view">
+                        <div class="tenday-labels">
+                            <span>1st Tenday</span>
+                            <span>2nd Tenday</span>
+                            <span>3rd Tenday</span>
+                        </div>
+                        <div id="harptos-grid" class="harptos-grid"></div>
+                        <div id="holiday-banner" class="holiday-banner hidden"></div>
+                    </div>
+
+                    <div id="cal-year-view" class="hidden">
+                        <div class="compass-container" id="compass-wheel">
+                            </div>
+                    </div>
+                </div>
+            </div>
+            
             <button class="save-btn" style="background-color: #007acc;" onclick="advanceDate()">Advance Day</button>
             <button class="save-btn" onclick="saveDay()">Save Day to Ledger</button>
         </div>
@@ -52,12 +86,6 @@
 
     <div id="dashboard" class="tab-content active-tab">
         <div style="display: flex; gap: 20px; background-color: #333; padding: 15px; border-radius: 4px;">
-            <div style="flex: 1;">
-                <h3>Operational Hours (0:00 - 24:00)</h3>
-                <div class="form-group"><label>Open:</label><input type="number" id="open_hour" value="12" min="0" max="23"></div>
-                <div class="form-group"><label>Close:</label><input type="number" id="close_hour" value="24" min="1" max="24"></div>
-                <div class="form-group"><label>Close for Day:</label><input type="checkbox" id="is_closed"></div>
-            </div>
             <div style="flex: 1;">
                 <h3>Simulation Modifiers</h3>
                 <div class="form-group"><label>Tavern Roll (d100):</label><input type="number" id="tavern_roll" value="50"></div>

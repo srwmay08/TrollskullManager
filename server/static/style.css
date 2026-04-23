@@ -273,3 +273,139 @@ th:hover {
     width: 70px; 
     text-align: center; 
 }
+
+/* --- Header Operations --- */
+.header-operations {
+    display: flex;
+    gap: 15px;
+    background: #1e1e1e;
+    padding: 5px 15px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    align-items: center;
+}
+.header-operations label { margin: 0; display: flex; align-items: center; gap: 5px; font-size: 14px; }
+.header-operations input[type="number"] { width: 50px; padding: 4px; text-align: center; }
+.header-operations .checkbox-label { cursor: pointer; }
+.header-operations input[type="checkbox"] { width: auto; margin: 0; transform: scale(1.2); cursor: pointer; }
+
+/* --- Calendar Widget & Popover --- */
+.calendar-widget { position: relative; user-select: none; }
+#global_date_display { 
+    font-weight: bold; 
+    color: #d7ba7d; 
+    padding: 8px 15px; 
+    background: #1e1e1e; 
+    border-radius: 4px; 
+    border: 1px solid #d7ba7d; 
+    cursor: pointer; 
+    transition: all 0.2s;
+}
+#global_date_display:hover { background: #333; box-shadow: 0 0 10px rgba(215, 186, 125, 0.3); }
+
+#calendar-popover {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    width: 380px;
+    background: #252526;
+    border: 1px solid #d7ba7d;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+    z-index: 2000;
+}
+
+.hidden { display: none !important; }
+
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+.cal-btn { background: #333; color: #ddd; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.cal-btn:hover { background: #555; color: #fff; }
+
+/* Harptos 30-Day Grid */
+.tenday-labels { display: flex; justify-content: space-around; font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+.harptos-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+}
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 3px;
+    font-size: 14px;
+    color: #ccc;
+}
+.cal-day.active-day {
+    background: #d7ba7d;
+    color: #000;
+    font-weight: bold;
+    border-color: #fff;
+    box-shadow: 0 0 8px #d7ba7d;
+}
+.holiday-banner {
+    background: #856404;
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Compass Wheel (Yearly View) */
+.compass-container {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    margin: 0 auto;
+    border-radius: 50%;
+    border: 2px dashed #444;
+    background: radial-gradient(circle, #1a1a1a 0%, #252526 70%);
+}
+.compass-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #d7ba7d;
+    font-weight: bold;
+    font-size: 18px;
+    text-align: center;
+}
+.compass-node {
+    position: absolute;
+    width: 60px;
+    height: 24px;
+    left: 50%; top: 50%;
+    margin-left: -30px;
+    margin-top: -12px;
+    text-align: center;
+    font-size: 11px;
+    color: #aaa;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    line-height: 22px;
+}
+.compass-node.active-node {
+    background: #d7ba7d;
+    color: #000;
+    font-weight: bold;
+    border-color: #fff;
+    box-shadow: 0 0 10px #d7ba7d;
+    z-index: 10;
+}
+.compass-node.holiday-node {
+    background: #4a3600;
+    color: #d7ba7d;
+    border-color: #856404;
+    font-size: 9px;
+    width: 70px;
+    margin-left: -35px;
+}
