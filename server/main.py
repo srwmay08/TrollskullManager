@@ -35,5 +35,7 @@ def serve_index():
     return FileResponse("index.html")
 
 if __name__ == "__main__":
-    # Add reload_excludes to ignore the data files!
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, reload_excludes=["*.csv"])
+    import uvicorn
+    # Changing host to 127.0.0.1 makes it much more stable on Windows
+    # and adding reload=True lets you save code changes without restarting the server
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
