@@ -203,10 +203,14 @@ def simulate_tavern_day(request: RollRequest) -> Dict[str, Any]:
             visitor: Dict[str, Any] = daily_visitors.pop(0)
             duration: int = random.randint(1, 3)
             
-            v_keys = {k.lower(): k for k in visitor.keys()}
+            v_keys = {k.lower().replace(" ", "_").strip(): k for k in visitor.keys()}
             f_name = visitor[v_keys["first_name"]] if "first_name" in v_keys else ""
             l_name = visitor[v_keys["last_name"]] if "last_name" in v_keys else ""
             customer_name: str = f"{f_name} {l_name}".strip()
+            
+            if not customer_name:
+                customer_name = "Unknown Patron"
+            
             lifestyle: str = visitor.get("lifestyle", "Modest")
             
             if visitor.get("is_quest_giver") and visitor.get("quest_hook_text"):
